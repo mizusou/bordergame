@@ -27,7 +27,7 @@ import { MapCanvas } from './components/MapCanvas.tsx';
 import { GuessInput } from './components/GuessInput.tsx';
 import { GuessHistory } from './components/GuessHistory.tsx';
 import { HintBar } from './components/HintBar.tsx';
-import { GameOverModal } from './components/GameOverModal.tsx';
+import { ResultsPanel } from './components/ResultsPanel.tsx';
 import { StatsModal } from './components/StatsModal.tsx';
 import { HelpModal } from './components/HelpModal.tsx';
 
@@ -91,7 +91,6 @@ export default function App() {
   // Modals
   const [isHelpOpen, setIsHelpOpen] = useState<boolean>(false);
   const [isStatsOpen, setIsStatsOpen] = useState<boolean>(false);
-  const [isGameOverOpen, setIsGameOverOpen] = useState<boolean>(false);
 
   // First visit check
   useEffect(() => {
@@ -129,16 +128,6 @@ export default function App() {
       console.warn('Confetti error', e);
     }
   }, []);
-
-  // When game is over on page reload or transition, open game over modal after brief delay
-  useEffect(() => {
-    if (currentStatus !== 'playing') {
-      const timer = setTimeout(() => {
-        setIsGameOverOpen(true);
-      }, 1000);
-      return () => clearTimeout(timer);
-    }
-  }, [currentStatus]);
 
   // Count wrong guesses for progressive hints (0..4)
   const wrongGuessesCount = useMemo(() => {
@@ -236,7 +225,6 @@ export default function App() {
     setPracticeGuesses([]);
     setPracticeStatus('playing');
     setPracticeLockedCountry(null);
-    setIsGameOverOpen(false);
   };
 
   const alreadyGuessedPairs: Array<[string, string]> = useMemo(() => {
@@ -305,24 +293,51 @@ export default function App() {
             />
           </div>
 
-          {/* Right Column: [ HYPOTHESIS SUBMISSION ] & Recordings */}
+          {/* Right Column: [ HYPOTHESIS SUBMISSION / EXHIBITION DEBRIEF ] & Recordings */}
           <div className="w-full lg:col-span-5 flex flex-col justify-between h-full gap-4 font-mono">
             <div className="flex flex-col gap-4">
               {/* Header Strip */}
               <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-2 text-xs sm:text-sm font-bold uppercase">
-                <span className="tracking-wider">[ HYPOTHESIS SUBMISSION ]</span>
-                <span className="text-[#d92626] dark:text-[#f87171]">
-                  {currentGuesses.length} / 6 ATTEMPTS
+                <span className="tracking-wider">
+                  {currentStatus === 'playing'
+                    ? '[ HYPOTHESIS SUBMISSION ]'
+                    : '[ EXHIBITION DEBRIEF // OFFICIAL RECORD ]'}
+                </span>
+                <span
+                  className={
+                    currentStatus === 'won'
+                      ? 'text-emerald-600 dark:text-emerald-400 font-bold'
+                      : currentStatus === 'lost'
+                      ? 'text-[#d92626] dark:text-[#f87171] font-bold'
+                      : 'text-[#d92626] dark:text-[#f87171]'
+                  }
+                >
+                  {currentStatus === 'playing'
+                    ? `${currentGuesses.length} / 6 ATTEMPTS`
+                    : currentStatus === 'won'
+                    ? `[ SOLVED • ${currentGuesses.length}/6 ]`
+                    : '[ UNRESOLVED • 6/6 ]'}
                 </span>
               </div>
 
-              {/* Input Selection */}
-              <GuessInput
-                lockedCountry={currentLockedCountry}
-                onMakeGuess={handleMakeGuess}
-                disabled={currentStatus !== 'playing'}
-                alreadyGuessedPairs={alreadyGuessedPairs}
-              />
+              {/* Active State: GuessInput during play, or In-Layout ResultsPanel when finished */}
+              {currentStatus === 'playing' ? (
+                <GuessInput
+                  lockedCountry={currentLockedCountry}
+                  onMakeGuess={handleMakeGuess}
+                  disabled={false}
+                  alreadyGuessedPairs={alreadyGuessedPairs}
+                />
+              ) : (
+                <ResultsPanel
+                  border={currentBorder}
+                  guesses={currentGuesses}
+                  isWon={currentStatus === 'won'}
+                  isDaily={mode === 'daily'}
+                  dayNumber={getDayNumber(todayStr)}
+                  onStartPractice={handleStartPractice}
+                />
+              )}
 
               {/* Previous Recordings */}
               <GuessHistory guesses={currentGuesses} maxGuesses={6} />
@@ -347,17 +362,6 @@ export default function App() {
       </div>
 
       {/* Modals */}
-      <GameOverModal
-        isOpen={isGameOverOpen}
-        onClose={() => setIsGameOverOpen(false)}
-        border={currentBorder}
-        guesses={currentGuesses}
-        isWon={currentStatus === 'won'}
-        isDaily={mode === 'daily'}
-        dayNumber={getDayNumber(todayStr)}
-        onStartPractice={handleStartPractice}
-      />
-
       <StatsModal
         isOpen={isStatsOpen}
         onClose={() => setIsStatsOpen(false)}
