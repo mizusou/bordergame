@@ -55,7 +55,28 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     });
 
     if (initialBounds.isValid()) {
-      map.fitBounds(initialBounds, { padding: [50, 50], animate: false });
+      map.fitBounds(initialBounds, { padding: [35, 35], animate: false });
+    }
+
+    // Staggered size invalidation and fitBounds to prevent mobile/hidden 0-size initialization bug
+    const invalidateAndFit = () => {
+      if (!map) return;
+      map.invalidateSize();
+      const bounds = L.geoJSON(border.geometry as any).getBounds();
+      if (bounds.isValid() && map.getSize().x > 20) {
+        map.fitBounds(bounds, { padding: [35, 35], animate: false });
+      }
+    };
+
+    const t1 = setTimeout(invalidateAndFit, 60);
+    const t2 = setTimeout(invalidateAndFit, 250);
+    const t3 = setTimeout(invalidateAndFit, 600);
+
+    const resizeObserver = new ResizeObserver(() => {
+      invalidateAndFit();
+    });
+    if (containerRef.current) {
+      resizeObserver.observe(containerRef.current);
     }
 
     // Technical grid canvas layer matching Swiss Neue Typographie aesthetic
@@ -99,6 +120,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     mapRef.current = map;
 
     return () => {
+      clearTimeout(t1);
+      clearTimeout(t2);
+      clearTimeout(t3);
+      resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
     };
@@ -175,6 +200,14 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const map = mapRef.current;
     const vectorGroup = vectorLayerGroupRef.current;
     if (!map || !vectorGroup) return;
+
+    if (map.getSize().x <= 20) {
+      map.invalidateSize();
+      const bounds = L.geoJSON(border.geometry as any).getBounds();
+      if (bounds.isValid()) {
+        map.fitBounds(bounds, { padding: [35, 35], animate: false });
+      }
+    }
 
     vectorGroup.clearLayers();
 

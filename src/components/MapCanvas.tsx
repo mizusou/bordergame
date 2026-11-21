@@ -35,7 +35,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       </div>
 
       {/* Sharp Framed Map Viewport */}
-      <div className="relative isolate w-full flex-1 min-h-[420px] sm:min-h-[480px] md:min-h-[540px] lg:min-h-[600px] xl:min-h-[660px] 2xl:min-h-[720px] border-2 border-black dark:border-zinc-400 bg-white dark:bg-[#0c0d12] overflow-hidden shadow-none">
+      <div className="relative isolate w-full h-[260px] sm:h-[360px] md:h-[480px] lg:h-[600px] xl:h-[660px] 2xl:h-[720px] border-2 border-black dark:border-zinc-400 bg-white dark:bg-[#0c0d12] overflow-hidden shadow-none">
         {/* Real Map (Leaflet) */}
         <LeafletMap
           key={`${mode}-${border.id}-${theme}`}
@@ -49,30 +49,30 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         />
 
         {/* BOTTOM-LEFT: Sharp Box [ NORTH-UP PROJECTION ] */}
-        <div className="absolute bottom-3 left-3 z-[1000] pointer-events-none">
-          <div className="bg-black text-white px-2.5 py-1 text-[10px] sm:text-xs font-mono font-bold tracking-widest uppercase border border-black shadow-none">
+        <div className="absolute bottom-2.5 left-2.5 sm:bottom-3 sm:left-3 z-[1000] pointer-events-none">
+          <div className="bg-black text-white px-2 py-0.5 sm:px-2.5 sm:py-1 text-[9px] sm:text-xs font-mono font-bold tracking-widest uppercase border border-black shadow-none">
             NORTH-UP PROJECTION
           </div>
         </div>
       </div>
 
       {/* Segmented Legend Box (Matching reference sheet) */}
-      <div className="border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3.5 py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-3 shadow-none">
-        <div className="flex items-center gap-5">
-          <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[11px] sm:text-xs">
-            <span className="w-3 h-3 bg-[#d92626] border border-black dark:border-white inline-block"></span>
-            <span>COAST ENDPOINT</span>
+      <div className="border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-2.5 sm:px-3.5 py-1.5 sm:py-2.5 text-xs sm:text-sm flex flex-wrap items-center justify-between gap-2 sm:gap-3 shadow-none">
+        <div className="flex items-center gap-3 sm:gap-5">
+          <div className="flex items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-[10px] sm:text-xs">
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-[#d92626] border border-black dark:border-white inline-block"></span>
+            <span>COAST</span>
           </div>
 
-          <div className="flex items-center gap-2 font-bold uppercase tracking-wider text-[11px] sm:text-xs">
-            <span className="w-3 h-3 bg-black dark:bg-white border border-black dark:border-zinc-300 inline-block"></span>
-            <span>TRIPOINT LAND</span>
+          <div className="flex items-center gap-1.5 sm:gap-2 font-bold uppercase tracking-wider text-[10px] sm:text-xs">
+            <span className="w-2.5 h-2.5 sm:w-3 sm:h-3 bg-black dark:bg-white border border-black dark:border-zinc-300 inline-block"></span>
+            <span>TRIPOINT</span>
           </div>
         </div>
 
         {/* Total Length */}
         {(unlockedHints >= 1 || isGameOver) && (
-          <div className="font-bold text-[#d92626] dark:text-[#f87171] text-xs sm:text-sm">
+          <div className="font-bold text-[#d92626] dark:text-[#f87171] text-[10px] sm:text-xs">
             {border.lengthKm.toFixed(1)} KM TOTAL
           </div>
         )}

@@ -244,9 +244,9 @@ export default function App() {
   }, [currentGuesses, currentBorder]);
 
   return (
-    <div className="min-h-screen bg-[#edece6] dark:bg-[#0d0e11] text-black dark:text-zinc-100 p-2 sm:p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center transition-colors duration-200">
+    <div className="min-h-screen bg-[#edece6] dark:bg-[#0d0e11] text-black dark:text-zinc-100 p-1.5 sm:p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center transition-colors duration-200 overflow-x-hidden">
       {/* Exhibition Outer Sheet */}
-      <div className="w-full max-w-[1600px] 2xl:max-w-[1780px] min-h-[calc(100vh-1.5rem)] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-4rem)] border-2 sm:border-4 border-black dark:border-zinc-300 bg-[#f4f3ee] dark:bg-[#121318] p-3 sm:p-6 lg:p-8 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col justify-between gap-4 sm:gap-6 sharp-box">
+      <div className="w-full max-w-[1600px] 2xl:max-w-[1780px] min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-4rem)] border-2 sm:border-4 border-black dark:border-zinc-300 bg-[#f4f3ee] dark:bg-[#121318] p-2.5 sm:p-6 lg:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] dark:sm:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col justify-between gap-3 sm:gap-6 sharp-box">
         {/* Exhibition Header */}
         <Header
           isDaily={mode === 'daily'}
@@ -368,7 +368,15 @@ export default function App() {
         stats={loadGameStats()}
       />
 
-      <HelpModal isOpen={isHelpOpen} onClose={() => setIsHelpOpen(false)} />
+      <HelpModal
+        isOpen={isHelpOpen}
+        onClose={() => {
+          setIsHelpOpen(false);
+          setTimeout(() => {
+            window.dispatchEvent(new Event('resize'));
+          }, 60);
+        }}
+      />
     </div>
   );
 }
