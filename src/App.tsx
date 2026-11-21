@@ -43,11 +43,23 @@ export default function App() {
 
   useEffect(() => {
     localStorage.setItem('frontier_theme', theme);
-    if (theme === 'dark') {
+    const isDark = theme === 'dark';
+    const bg = isDark ? '#0d0e11' : '#edece6';
+    if (isDark) {
       document.documentElement.classList.add('dark');
     } else {
       document.documentElement.classList.remove('dark');
     }
+    document.documentElement.style.backgroundColor = bg;
+    document.body.style.backgroundColor = bg;
+
+    let metaTheme = document.querySelector('meta[name="theme-color"]');
+    if (!metaTheme) {
+      metaTheme = document.createElement('meta');
+      metaTheme.setAttribute('name', 'theme-color');
+      document.head.appendChild(metaTheme);
+    }
+    metaTheme.setAttribute('content', bg);
   }, [theme]);
 
   const handleToggleTheme = () => {
@@ -247,7 +259,7 @@ export default function App() {
   }, [currentGuesses, currentBorder]);
 
   return (
-    <div className="min-h-screen bg-[#edece6] dark:bg-[#0d0e11] text-black dark:text-zinc-100 p-1.5 sm:p-4 md:p-6 lg:p-8 flex flex-col items-center justify-center transition-colors duration-200 overflow-x-hidden">
+    <div className="min-h-screen min-h-[100dvh] bg-[#edece6] dark:bg-[#0d0e11] text-black dark:text-zinc-100 p-2 sm:p-4 md:p-6 lg:p-8 pb-8 sm:pb-8 flex flex-col items-center justify-start sm:justify-center transition-colors duration-200 overflow-x-hidden">
       {/* Exhibition Outer Sheet */}
       <div className="w-full max-w-[1600px] 2xl:max-w-[1780px] min-h-[calc(100vh-1rem)] sm:min-h-[calc(100vh-2.5rem)] lg:min-h-[calc(100vh-4rem)] border-2 sm:border-4 border-black dark:border-zinc-300 bg-[#f4f3ee] dark:bg-[#121318] p-2.5 sm:p-6 lg:p-8 shadow-[4px_4px_0px_0px_rgba(0,0,0,1)] sm:shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[4px_4px_0px_0px_rgba(255,255,255,0.15)] dark:sm:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col justify-between gap-3 sm:gap-6 sharp-box">
         {/* Exhibition Header */}
