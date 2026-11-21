@@ -61,10 +61,10 @@ export const HintBar: React.FC<HintBarProps> = ({
       lockedLabel: '1 wrong guess',
     },
     {
-      title: 'Context',
+      title: 'Extensions',
       icon: GitFork,
       unlocked: wrongGuessesCount >= 2 || isGameOver,
-      content: `${border.contextStubs.length} stubs active`,
+      content: `${border.contextStubs.length} adjacent lines`,
       lockedLabel: '2 wrong guesses',
     },
     {

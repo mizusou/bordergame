@@ -44,7 +44,6 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
             country1,
             country2,
             isCorrect,
-            halfMatch,
             halfMatchCountry,
             distanceKm,
             bearingDeg,
@@ -52,11 +51,9 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
           } = guess;
 
           const isC1Half =
-            halfMatch === 'A' ||
-            halfMatchCountry?.toLowerCase() === country1.toLowerCase();
+            Boolean(halfMatchCountry && country1.toLowerCase() === halfMatchCountry.toLowerCase());
           const isC2Half =
-            halfMatch === 'B' ||
-            halfMatchCountry?.toLowerCase() === country2.toLowerCase();
+            Boolean(halfMatchCountry && country2.toLowerCase() === halfMatchCountry.toLowerCase());
 
           return (
             <div

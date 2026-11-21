@@ -87,7 +87,7 @@ export function generateShareText(
   isWon: boolean
 ): string {
   const resultHeader = isWon ? `${guesses.length}/6` : 'X/6';
-  const lines: string[] = [`BORDERLINE #${dayNumber} ${resultHeader}`];
+  const lines: string[] = [`FRONT / IER #${dayNumber} ${resultHeader}`];
 
   for (const g of guesses) {
     if (g.isCorrect) {
@@ -102,7 +102,7 @@ export function generateShareText(
   }
 
   lines.push('');
-  lines.push('Identify borders at borderline.game');
+  lines.push('Exhibition & boundary analysis at frontier.game');
   return lines.join('\n');
 }
 
