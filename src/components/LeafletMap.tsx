@@ -280,7 +280,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       {/* Floating Basemap Toggle (When game is over) */}
       {isGameOver && (
-        <div className="absolute top-3.5 right-3.5 z-10 flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
+        <div className="absolute top-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
           <button
             onClick={() => setMapStyle('dark')}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
@@ -305,7 +305,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       )}
 
       {/* Modern Zoom & Reset Controls */}
-      <div className="absolute bottom-3.5 right-3.5 z-10 flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl p-0.5 shadow-md">
+      <div className="absolute bottom-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl p-0.5 shadow-md">
         <button
           onClick={handleZoomIn}
           className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors cursor-pointer"

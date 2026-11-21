@@ -1,6 +1,6 @@
 import React from 'react';
 import { GuessResult } from '../types/game.ts';
-import { Check, Navigation } from 'lucide-react';
+import { Check, ArrowUp } from 'lucide-react';
 
 interface GuessHistoryProps {
   guesses: GuessResult[];
@@ -109,11 +109,11 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
                 ) : (
                   <div className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 px-2.5 py-1 rounded-full text-xs font-mono">
                     <div
-                      className="flex items-center gap-1 text-zinc-300 font-medium"
+                      className="flex items-center gap-1.5 text-zinc-300 font-medium"
                       title={`Bearing: ${bearingDeg}° (${compassDirection})`}
                     >
-                      <Navigation
-                        className="w-3 h-3 text-emerald-400 transition-transform duration-500"
+                      <ArrowUp
+                        className="w-3.5 h-3.5 text-emerald-400 transition-transform duration-500 stroke-[2.5]"
                         style={{
                           transform: `rotate(${bearingDeg}deg)`,
                         }}

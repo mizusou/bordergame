@@ -33,14 +33,14 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       />
 
       {/* TOP-LEFT: Subtle Coordinates Pill */}
-      <div className="absolute top-3.5 left-3.5 z-10 pointer-events-none">
+      <div className="absolute top-3.5 left-3.5 z-[1000] pointer-events-none">
         <div className="bg-zinc-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-zinc-800/80 text-[10px] text-zinc-400 font-mono shadow-sm">
           {formatCoordinates(border.midpoint)}
         </div>
       </div>
 
       {/* BOTTOM-LEFT: Endpoint Legend & Border Length Pill */}
-      <div className="absolute bottom-3.5 left-3.5 z-10 flex flex-wrap items-center gap-2 pointer-events-none">
+      <div className="absolute bottom-3.5 left-3.5 z-[1000] flex flex-wrap items-center gap-2 pointer-events-none">
         {/* Endpoint Legend */}
         <div className="flex items-center gap-2.5 bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-800 text-[11px] text-zinc-300 shadow-md">
           <div className="flex items-center gap-1.5">
