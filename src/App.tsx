@@ -61,7 +61,10 @@ export default function App() {
   const [dailyState, setDailyState] = useState<DailyGameState>(() => {
     const saved = loadDailyState(todayStr);
     if (saved && saved.borderId === initialDaily.border.id) {
-      return saved;
+      return {
+        ...saved,
+        dayNumber: initialDaily.dayNumber,
+      };
     }
     return {
       dateStr: todayStr,

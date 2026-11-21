@@ -1,8 +1,8 @@
 import { BorderItem } from '../types/game.ts';
 import { allBorders } from './neighbors.ts';
 
-// Anchor date for Day #1 (e.g., Jan 1, 2025)
-const EPOCH_DATE = new Date(2025, 0, 1);
+// Anchor date for Day #1 (Nov 11, 2026 -> Nov 20, 2026 is Exhibition #9)
+const EPOCH_DATE = new Date(2026, 10, 11, 12, 0, 0);
 
 export function getTodayDateString(): string {
   const now = new Date();
@@ -13,10 +13,17 @@ export function getTodayDateString(): string {
 }
 
 export function getDayNumber(dateStr?: string): number {
-  const d = dateStr ? new Date(dateStr) : new Date();
+  let d: Date;
+  if (dateStr) {
+    const [y, m, day] = dateStr.split('-').map(Number);
+    d = new Date(y, m - 1, day, 12, 0, 0);
+  } else {
+    const now = new Date();
+    d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
+  }
   const diffTime = d.getTime() - EPOCH_DATE.getTime();
-  const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
-  return Math.max(1, diffDays + 1);
+  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+  return Math.max(1, diffDays);
 }
 
 // Deterministic shuffle of border indices using a fixed salt
