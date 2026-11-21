@@ -14,27 +14,28 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
   const slots = Array.from({ length: maxGuesses }, (_, i) => guesses[i] || null);
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 font-sans">
-      <div className="flex items-center justify-between text-xs text-zinc-400 px-1 font-medium">
-        <span>Guesses</span>
-        <span className="font-mono text-zinc-500">
-          {guesses.length} of {maxGuesses}
+    <div className="w-full flex flex-col gap-2 font-mono text-xs">
+      {/* Section Header (Matching reference sheet) */}
+      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] text-black dark:text-zinc-300">
+        <span>PREVIOUS RECORDINGS</span>
+        <span className="text-zinc-500">
+          {guesses.length} / {maxGuesses} SLOTS
         </span>
       </div>
 
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-1.5 pt-1">
         {slots.map((guess, index) => {
           if (!guess) {
             return (
               <div
                 key={`empty-${index}`}
-                className="h-11 px-4 rounded-xl border border-zinc-800/60 bg-zinc-950/30 flex items-center justify-between text-xs text-zinc-700 select-none font-mono"
+                className="px-3 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/40 flex items-center justify-between text-zinc-400 dark:text-zinc-600 select-none sharp-box"
               >
-                <span className="font-semibold text-zinc-700">0{index + 1}</span>
-                <span className="text-[11px] tracking-wider text-zinc-800 font-sans">
-                  Empty
-                </span>
-                <span className="w-4" />
+                <div className="flex items-center gap-2">
+                  <span className="font-bold">0{index + 1} /</span>
+                  <span className="tracking-widest">-----------------------------</span>
+                </div>
+                <span className="text-[10px] uppercase font-bold">[ PENDING ]</span>
               </div>
             );
           }
@@ -60,72 +61,65 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
           return (
             <div
               key={`guess-${index}`}
-              className={`min-h-12 px-3 sm:px-4 py-2 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs transition-all shadow-sm animate-fade-in ${
+              className={`px-3 py-2 border-2 flex items-center justify-between gap-2 transition-all sharp-box animate-fade-in ${
                 isCorrect
-                  ? 'border-emerald-500/50 bg-emerald-950/20 text-emerald-100 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
-                  : halfMatch !== 'none'
-                  ? 'border-zinc-700 bg-zinc-900/90 text-zinc-200'
-                  : 'border-zinc-800/90 bg-zinc-900/60 text-zinc-300'
+                  ? 'border-emerald-600 bg-emerald-600 text-white font-bold'
+                  : 'border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 text-black dark:text-zinc-100'
               }`}
             >
-              {/* Left: Slot number & Country Tiles (Wordle style) */}
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="font-mono text-[11px] font-semibold text-zinc-500 w-5">
-                  0{index + 1}
+              {/* Left: Slot number & Country Names */}
+              <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+                <span className={`font-bold shrink-0 ${isCorrect ? 'text-white' : 'text-[#d92626] dark:text-[#f87171]'}`}>
+                  0{index + 1} /
                 </span>
 
-                {/* Country 1 Tile */}
-                <span
-                  className={`px-3 py-1 rounded-lg font-medium text-xs tracking-tight shadow-sm transition-all ${
-                    isCorrect || isC1Half
-                      ? 'bg-emerald-600 text-white font-bold border border-emerald-500/80 shadow-emerald-950/50'
-                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/60'
-                  }`}
-                >
-                  {country1}
-                </span>
-
-                <span className="text-zinc-600 font-bold text-xs">+</span>
-
-                {/* Country 2 Tile */}
-                <span
-                  className={`px-3 py-1 rounded-lg font-medium text-xs tracking-tight shadow-sm transition-all ${
-                    isCorrect || isC2Half
-                      ? 'bg-emerald-600 text-white font-bold border border-emerald-500/80 shadow-emerald-950/50'
-                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/60'
-                  }`}
-                >
-                  {country2}
-                </span>
+                <div className="flex items-center gap-1.5 uppercase font-bold text-xs truncate">
+                  <span
+                    className={
+                      !isCorrect && isC1Half
+                        ? 'text-emerald-600 dark:text-emerald-400 underline decoration-2'
+                        : ''
+                    }
+                  >
+                    {country1}
+                  </span>
+                  <span className="opacity-50">+</span>
+                  <span
+                    className={
+                      !isCorrect && isC2Half
+                        ? 'text-emerald-600 dark:text-emerald-400 underline decoration-2'
+                        : ''
+                    }
+                  >
+                    {country2}
+                  </span>
+                </div>
               </div>
 
-              {/* Right: Telemetry / Direction & Distance Pill */}
-              <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
+              {/* Right: Distance & Direction in brackets matching reference */}
+              <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
                 {isCorrect ? (
-                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold text-xs">
-                    <Check className="w-3.5 h-3.5" />
-                    <span>Solved!</span>
+                  <div className="flex items-center gap-1 uppercase font-bold text-white">
+                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                    <span>[ SOLVED ]</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 px-2.5 py-1 rounded-full text-xs font-mono">
+                  <div className="flex items-center gap-2">
+                    <span className="font-bold">
+                      {distanceKm.toLocaleString()} km
+                    </span>
                     <div
-                      className="flex items-center gap-1.5 text-zinc-300 font-medium"
+                      className="flex items-center gap-1 font-bold text-[#d92626] dark:text-[#f87171]"
                       title={`Bearing: ${bearingDeg}° (${compassDirection})`}
                     >
                       <ArrowUp
-                        className="w-3.5 h-3.5 text-emerald-400 transition-transform duration-500 stroke-[2.5]"
+                        className="w-3.5 h-3.5 stroke-[2.5]"
                         style={{
                           transform: `rotate(${bearingDeg}deg)`,
                         }}
                       />
-                      <span>{compassDirection}</span>
+                      <span>[ {compassDirection} ]</span>
                     </div>
-
-                    <span className="text-zinc-600">·</span>
-
-                    <span className="text-zinc-300 font-semibold">
-                      {distanceKm.toLocaleString()} km
-                    </span>
                   </div>
                 )}
               </div>

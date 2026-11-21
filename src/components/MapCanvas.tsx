@@ -4,6 +4,7 @@ import { LeafletMap } from './LeafletMap.tsx';
 import { formatCoordinates } from '../utils/geo.ts';
 
 interface MapCanvasProps {
+  theme: 'light' | 'dark';
   mode?: 'daily' | 'practice';
   border: BorderItem;
   unlockedHints: number;
@@ -14,6 +15,7 @@ interface MapCanvasProps {
 }
 
 export const MapCanvas: React.FC<MapCanvasProps> = ({
+  theme,
   mode = 'daily',
   border,
   unlockedHints,
@@ -23,47 +25,55 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   isWon,
 }) => {
   return (
-    <div className="relative isolate w-full h-[380px] sm:h-[440px] md:h-[480px] bg-[#0c0d12] rounded-3xl border border-zinc-800/80 overflow-hidden shadow-2xl transition-all">
-      {/* Real Map (Leaflet) */}
-      <LeafletMap
-        key={`${mode}-${border.id}`}
-        border={border}
-        unlockedHints={unlockedHints}
-        lockedCountry={lockedCountry}
-        guessedCountries={guessedCountries}
-        isGameOver={isGameOver}
-        isWon={isWon}
-      />
-
-      {/* TOP-LEFT: Subtle Coordinates Pill */}
-      <div className="absolute top-3.5 left-3.5 z-[1000] pointer-events-none">
-        <div className="bg-zinc-900/80 backdrop-blur-md px-3 py-1 rounded-full border border-zinc-800/80 text-[10px] text-zinc-400 font-mono shadow-sm">
+    <div className="w-full flex flex-col gap-3 font-mono">
+      {/* Top Header Strip: [ FIGURE A.1 ] on left, region/coords on right */}
+      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-2 text-xs font-bold uppercase">
+        <span className="tracking-wider">[ FIGURE A.1 ]</span>
+        <span className="text-zinc-600 dark:text-zinc-400">
           {formatCoordinates(border.midpoint)}
+        </span>
+      </div>
+
+      {/* Sharp Framed Map Viewport */}
+      <div className="relative isolate w-full h-[340px] sm:h-[400px] md:h-[440px] border-2 border-black dark:border-zinc-400 bg-white dark:bg-[#0c0d12] overflow-hidden shadow-none">
+        {/* Real Map (Leaflet) */}
+        <LeafletMap
+          key={`${mode}-${border.id}-${theme}`}
+          theme={theme}
+          border={border}
+          unlockedHints={unlockedHints}
+          lockedCountry={lockedCountry}
+          guessedCountries={guessedCountries}
+          isGameOver={isGameOver}
+          isWon={isWon}
+        />
+
+        {/* BOTTOM-LEFT: Sharp Box [ NORTH-UP PROJECTION ] */}
+        <div className="absolute bottom-3 left-3 z-[1000] pointer-events-none">
+          <div className="bg-black text-white px-2.5 py-1 text-[10px] font-mono font-bold tracking-widest uppercase border border-black shadow-none">
+            NORTH-UP PROJECTION
+          </div>
         </div>
       </div>
 
-      {/* BOTTOM-LEFT: Endpoint Legend & Border Length Pill */}
-      <div className="absolute bottom-3.5 left-3.5 z-[1000] flex flex-wrap items-center gap-2 pointer-events-none">
-        {/* Endpoint Legend */}
-        <div className="flex items-center gap-2.5 bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-800 text-[11px] text-zinc-300 shadow-md">
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-sky-300 inline-block shadow-sm" />
-            <span className="font-medium text-zinc-300">Coastline</span>
+      {/* Segmented Legend Box (Matching reference sheet) */}
+      <div className="border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3 py-2 text-xs flex flex-wrap items-center justify-between gap-3 shadow-none">
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]">
+            <span className="w-2.5 h-2.5 bg-[#d92626] border border-black dark:border-white inline-block"></span>
+            <span>COAST ENDPOINT</span>
           </div>
-          <span className="text-zinc-600">·</span>
-          <div className="flex items-center gap-1.5">
-            <span className="w-2.5 h-2.5 rounded-full border-[1.5px] border-amber-400 bg-zinc-900 inline-block" />
-            <span className="font-medium text-zinc-300">Tripoint</span>
+
+          <div className="flex items-center gap-1.5 font-bold uppercase tracking-wider text-[11px]">
+            <span className="w-2.5 h-2.5 bg-black dark:bg-white border border-black dark:border-zinc-300 inline-block"></span>
+            <span>TRIPOINT LAND</span>
           </div>
         </div>
 
-        {/* Total Length (Unlocked after 1 guess or on game over) */}
+        {/* Total Length */}
         {(unlockedHints >= 1 || isGameOver) && (
-          <div className="bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-800 text-[11px] shadow-md flex items-center gap-1.5 animate-fade-in">
-            <span className="text-emerald-400 font-semibold font-mono">
-              {border.lengthKm.toLocaleString()} km
-            </span>
-            <span className="text-zinc-500 text-[10px] font-mono">total</span>
+          <div className="font-bold text-[#d92626] dark:text-[#f87171] text-xs">
+            {border.lengthKm.toFixed(1)} KM TOTAL
           </div>
         )}
       </div>

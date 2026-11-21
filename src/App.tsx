@@ -35,6 +35,25 @@ export default function App() {
   const todayStr = useMemo(() => getTodayDateString(), []);
   const initialDaily = useMemo(() => getDailyBorder(todayStr), [todayStr]);
 
+  // Theme: light | dark
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    const saved = localStorage.getItem('frontier_theme');
+    return saved === 'light' || saved === 'dark' ? saved : 'dark';
+  });
+
+  useEffect(() => {
+    localStorage.setItem('frontier_theme', theme);
+    if (theme === 'dark') {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, [theme]);
+
+  const handleToggleTheme = () => {
+    setTheme((prev) => (prev === 'dark' ? 'light' : 'dark'));
+  };
+
   // Mode: daily or practice
   const [mode, setMode] = useState<'daily' | 'practice'>('daily');
 
@@ -237,68 +256,91 @@ export default function App() {
   }, [currentGuesses, currentBorder]);
 
   return (
-    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-200">
-      {/* Header */}
-      <Header
-        isDaily={mode === 'daily'}
-        dayNumber={getDayNumber(todayStr)}
-        onToggleMode={handleToggleMode}
-        onOpenHelp={() => setIsHelpOpen(true)}
-        onOpenStats={() => setIsStatsOpen(true)}
-      />
+    <div className="min-h-screen bg-[#edece6] dark:bg-[#0d0e11] text-black dark:text-zinc-100 p-2 sm:p-4 md:p-8 flex flex-col items-center justify-center transition-colors duration-200">
+      {/* Exhibition Outer Sheet */}
+      <div className="w-full max-w-5xl border-2 sm:border-4 border-black dark:border-zinc-300 bg-[#f4f3ee] dark:bg-[#121318] p-3 sm:p-6 shadow-[8px_8px_0px_0px_rgba(0,0,0,1)] dark:shadow-[8px_8px_0px_0px_rgba(255,255,255,0.15)] flex flex-col gap-4 sm:gap-6 sharp-box">
+        {/* Exhibition Header */}
+        <Header
+          isDaily={mode === 'daily'}
+          dayNumber={getDayNumber(todayStr)}
+          lengthKm={currentBorder.lengthKm}
+          isUnlockedLength={wrongGuessesCount >= 1}
+          gameStatus={currentStatus}
+          theme={theme}
+          onToggleTheme={handleToggleTheme}
+          onToggleMode={handleToggleMode}
+          onOpenHelp={() => setIsHelpOpen(true)}
+          onOpenStats={() => setIsStatsOpen(true)}
+        />
 
-      {/* Main Content */}
-      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 flex flex-col gap-4">
-        {/* Practice Mode Banner */}
+        {/* Practice Mode Strip */}
         {mode === 'practice' && (
-          <div className="bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 px-4 py-2 rounded-2xl text-xs font-medium flex items-center justify-between shadow-sm animate-fade-in">
+          <div className="border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3 py-1.5 text-xs font-mono flex items-center justify-between font-bold uppercase sharp-box">
             <span className="flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Practice Mode active</span>
+              <span className="w-2 h-2 bg-[#d92626] dark:bg-[#f87171] inline-block animate-pulse"></span>
+              <span>PRACTICE SESSION ACTIVE</span>
             </span>
             <button
               onClick={handleStartPractice}
-              className="text-emerald-300 hover:text-white font-semibold underline cursor-pointer"
+              className="text-[#d92626] dark:text-[#f87171] hover:underline cursor-pointer"
             >
-              Next Border →
+              [ NEXT BOUNDARY → ]
             </button>
           </div>
         )}
 
-        {/* Map Canvas */}
-        <MapCanvas
-          mode={mode}
-          border={currentBorder}
-          unlockedHints={wrongGuessesCount}
-          lockedCountry={currentLockedCountry}
-          guessedCountries={guessedCountriesList}
-          isGameOver={currentStatus !== 'playing'}
-          isWon={currentStatus === 'won'}
-        />
+        {/* Exhibition Two-Column Work Grid (FIGURE A.1 on left, HYPOTHESIS SUBMISSION on right) */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 items-start">
+          {/* Left Column: [ FIGURE A.1 ] Map & Segmented Legend */}
+          <div className="w-full flex flex-col gap-4">
+            <MapCanvas
+              theme={theme}
+              mode={mode}
+              border={currentBorder}
+              unlockedHints={wrongGuessesCount}
+              lockedCountry={currentLockedCountry}
+              guessedCountries={guessedCountriesList}
+              isGameOver={currentStatus !== 'playing'}
+              isWon={currentStatus === 'won'}
+            />
+          </div>
 
-        {/* Dual Input */}
-        <GuessInput
-          lockedCountry={currentLockedCountry}
-          onMakeGuess={handleMakeGuess}
-          disabled={currentStatus !== 'playing'}
-          alreadyGuessedPairs={alreadyGuessedPairs}
-        />
+          {/* Right Column: [ HYPOTHESIS SUBMISSION ] & Recordings */}
+          <div className="w-full flex flex-col gap-4 font-mono">
+            {/* Header Strip */}
+            <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-2 text-xs font-bold uppercase">
+              <span className="tracking-wider">[ HYPOTHESIS SUBMISSION ]</span>
+              <span className="text-[#d92626] dark:text-[#f87171]">
+                {currentGuesses.length} / 6 ATTEMPTS
+              </span>
+            </div>
 
-        {/* Hints Bar */}
-        <HintBar
-          border={currentBorder}
-          wrongGuessesCount={wrongGuessesCount}
-          isGameOver={currentStatus !== 'playing'}
-        />
+            {/* Input Selection */}
+            <GuessInput
+              lockedCountry={currentLockedCountry}
+              onMakeGuess={handleMakeGuess}
+              disabled={currentStatus !== 'playing'}
+              alreadyGuessedPairs={alreadyGuessedPairs}
+            />
 
-        {/* Guess History */}
-        <GuessHistory guesses={currentGuesses} maxGuesses={6} />
-      </main>
+            {/* Previous Recordings */}
+            <GuessHistory guesses={currentGuesses} maxGuesses={6} />
 
-      {/* Minimal Footer */}
-      <footer className="border-t border-zinc-900 py-4 px-4 text-center text-xs text-zinc-600">
-        <span>BORDERLINE · 100% Client-Side GIS</span>
-      </footer>
+            {/* Progressive Notes / Hints */}
+            <HintBar
+              border={currentBorder}
+              wrongGuessesCount={wrongGuessesCount}
+              isGameOver={currentStatus !== 'playing'}
+            />
+          </div>
+        </div>
+
+        {/* Bottom Exhibition Footer: NEUE TYPOGRAPHIE SYSTEM // 2026 EDITION */}
+        <footer className="border-t-2 border-black dark:border-zinc-400 pt-3 text-xs font-mono flex items-center justify-between text-zinc-600 dark:text-zinc-400 uppercase font-bold">
+          <span>NEUE TYPOGRAPHIE SYSTEM</span>
+          <span>2026 EDITION</span>
+        </footer>
+      </div>
 
       {/* Modals */}
       <GameOverModal

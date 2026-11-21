@@ -6,6 +6,7 @@ import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { getClosestPointOnGeometry } from '../utils/geo.ts';
 
 interface LeafletMapProps {
+  theme: 'light' | 'dark';
   border: BorderItem;
   unlockedHints: number;
   lockedCountry: string | null;
@@ -15,6 +16,7 @@ interface LeafletMapProps {
 }
 
 export const LeafletMap: React.FC<LeafletMapProps> = ({
+  theme,
   border,
   unlockedHints,
   lockedCountry,
@@ -30,8 +32,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const gridLayerRef = useRef<L.GridLayer | null>(null);
   const vectorLayerGroupRef = useRef<L.LayerGroup | null>(null);
 
-  // Style switcher for reveal mode: 'dark' | 'satellite'
-  const [mapStyle, setMapStyle] = useState<'dark' | 'satellite'>('dark');
+  // Style switcher for reveal mode: 'canvas' | 'satellite'
+  const [mapStyle, setMapStyle] = useState<'canvas' | 'satellite'>('canvas');
 
   // Initialize Map
   useEffect(() => {
@@ -56,31 +58,38 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       map.fitBounds(initialBounds, { padding: [50, 50], animate: false });
     }
 
-    // Custom dark grid canvas layer for guessing mode
-    const DarkGridLayer = L.GridLayer.extend({
+    // Technical grid canvas layer matching Swiss Neue Typographie aesthetic
+    const TechnicalGridLayer = L.GridLayer.extend({
       createTile: function () {
         const tile = document.createElement('canvas');
         tile.width = 256;
         tile.height = 256;
         const ctx = tile.getContext('2d');
         if (ctx) {
-          ctx.fillStyle = '#0a0b10';
+          const isLight = theme === 'light';
+          ctx.fillStyle = isLight ? '#fcfbf7' : '#0c0d12';
           ctx.fillRect(0, 0, 256, 256);
 
           // Subtle hairline grid
-          ctx.strokeStyle = '#181922';
+          ctx.strokeStyle = isLight ? '#e7e5dc' : '#1c1e26';
           ctx.lineWidth = 1;
           ctx.strokeRect(0, 0, 256, 256);
 
-          // Center coordinate dot
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-          ctx.fillRect(127, 127, 2, 2);
+          // Center coordinate crosshair
+          ctx.strokeStyle = isLight ? '#c8c5b9' : '#313543';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(128, 122);
+          ctx.lineTo(128, 134);
+          ctx.moveTo(122, 128);
+          ctx.lineTo(134, 128);
+          ctx.stroke();
         }
         return tile;
       },
     });
 
-    const grid = new DarkGridLayer();
+    const grid = new TechnicalGridLayer();
     grid.addTo(map);
     gridLayerRef.current = grid;
 
@@ -93,9 +102,9 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       map.remove();
       mapRef.current = null;
     };
-  }, []);
+  }, [theme]);
 
-  // Update Basemap Tiles based on Game Over & mapStyle
+  // Update Basemap Tiles based on Game Over, theme, & mapStyle
   useEffect(() => {
     const map = mapRef.current;
     if (!map) return;
@@ -117,6 +126,18 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         );
         satLayer.addTo(map);
         tileLayerRef.current = satLayer;
+      } else if (theme === 'light') {
+        const lightBase = L.tileLayer(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
+          { maxZoom: 16 }
+        );
+        const lightLabels = L.tileLayer(
+          'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
+          { maxZoom: 16 }
+        );
+        const group = L.layerGroup([lightBase, lightLabels]);
+        group.addTo(map);
+        tileLayerRef.current = group as any;
       } else {
         const darkBase = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
@@ -142,12 +163,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         }
       });
 
-      // Ensure dark grid is active during guessing
+      // Ensure grid is active during guessing
       if (gridLayerRef.current && !map.hasLayer(gridLayerRef.current)) {
         gridLayerRef.current.addTo(map);
       }
     }
-  }, [isGameOver, mapStyle]);
+  }, [isGameOver, mapStyle, theme]);
 
   // Update Border, Endpoints, Labels, and Stubs
   useEffect(() => {
@@ -157,73 +178,60 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     vectorGroup.clearLayers();
 
+    const isLight = theme === 'light';
     const lineColor = isGameOver
       ? isWon
-        ? '#22c55e'
-        : '#f59e0b'
-      : '#38bdf8';
+        ? '#16a34a'
+        : '#d92626'
+      : isLight
+      ? '#000000'
+      : '#ffffff';
 
-    // 1. Outer Glow Line
-    const glowLayer = L.geoJSON(border.geometry as any, {
-      style: {
-        color: lineColor,
-        weight: 9,
-        opacity: 0.4,
-        lineCap: 'round',
-        lineJoin: 'round',
-      },
-    });
-    vectorGroup.addLayer(glowLayer);
+    // 1. Outer Glow / Contrast Halo
+    if (!isLight || isGameOver) {
+      const glowLayer = L.geoJSON(border.geometry as any, {
+        style: {
+          color: lineColor,
+          weight: 7,
+          opacity: isGameOver ? 0.35 : 0.2,
+          lineCap: 'square',
+          lineJoin: 'miter',
+        },
+      });
+      vectorGroup.addLayer(glowLayer);
+    }
 
-    // 2. Inner Sharp Line
+    // 2. Inner Sharp Line (Stark black in light mode, stark white in dark mode)
     const mainLine = L.geoJSON(border.geometry as any, {
       style: {
-        color: isGameOver ? lineColor : '#ffffff',
-        weight: 3.5,
+        color: lineColor,
+        weight: 4,
         opacity: 1,
-        lineCap: 'round',
-        lineJoin: 'round',
+        lineCap: 'square',
+        lineJoin: 'miter',
       },
     });
     vectorGroup.addLayer(mainLine);
 
-    // 3. Endpoint Markers
+    // 3. Square Endpoint Markers (Swiss / Neue Typographie aesthetic)
     for (const ep of border.endpoints) {
       const [lon, lat] = ep.coordinates;
       if (ep.type === 'coast') {
-        const outerCircle = L.circleMarker([lat, lon], {
-          radius: 9,
-          fillColor: 'transparent',
-          color: '#38bdf8',
-          weight: 1.5,
-          dashArray: '2, 3',
+        const coastIcon = L.divIcon({
+          className: 'square-endpoint-marker',
+          html: `<div class="w-3 h-3 bg-[#d92626] border-2 border-black dark:border-white shadow-none transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>`,
+          iconSize: [0, 0],
         });
-        const coreCircle = L.circleMarker([lat, lon], {
-          radius: 5,
-          fillColor: '#0284c7',
-          color: '#ffffff',
-          weight: 1.5,
-          fillOpacity: 1,
-        });
-        vectorGroup.addLayer(outerCircle);
-        vectorGroup.addLayer(coreCircle);
+        const marker = L.marker([lat, lon], { icon: coastIcon });
+        vectorGroup.addLayer(marker);
       } else {
-        const tripointCircle = L.circleMarker([lat, lon], {
-          radius: 6.5,
-          fillColor: '#0c0d12',
-          color: '#f59e0b',
-          weight: 2,
-          fillOpacity: 1,
+        const triIcon = L.divIcon({
+          className: 'square-endpoint-marker',
+          html: `<div class="w-3 h-3 bg-black dark:bg-white border-2 border-black dark:border-zinc-300 shadow-none transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"></div>`,
+          iconSize: [0, 0],
         });
-        const centerDot = L.circleMarker([lat, lon], {
-          radius: 1.5,
-          fillColor: '#f59e0b',
-          color: '#f59e0b',
-          weight: 1,
-          fillOpacity: 1,
-        });
-        vectorGroup.addLayer(tripointCircle);
-        vectorGroup.addLayer(centerDot);
+        const marker = L.marker([lat, lon], { icon: triIcon });
+        vectorGroup.addLayer(marker);
       }
     }
 
@@ -362,7 +370,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
         const iconA = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryA.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryA.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
@@ -393,7 +401,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
         const iconB = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryB.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryB.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
@@ -454,53 +462,53 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
   return (
     <div className="relative w-full h-full">
-      <div ref={containerRef} className="w-full h-full rounded-2xl overflow-hidden" />
+      <div ref={containerRef} className="w-full h-full rounded-none overflow-hidden" />
 
       {/* Floating Basemap Toggle (When game is over) */}
       {isGameOver && (
-        <div className="absolute top-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
+        <div className="absolute top-3 right-3 z-[1000] flex items-center border-2 border-black dark:border-zinc-300 bg-white dark:bg-zinc-900 shadow-none font-mono text-xs divide-x-2 divide-black dark:divide-zinc-300">
           <button
-            onClick={() => setMapStyle('dark')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
-              mapStyle === 'dark'
-                ? 'bg-zinc-800 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-white'
+            onClick={() => setMapStyle('canvas')}
+            className={`px-3 py-1 font-bold uppercase transition-colors cursor-pointer ${
+              mapStyle === 'canvas'
+                ? 'bg-black text-white dark:bg-white dark:text-black'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white'
             }`}
           >
-            Dark Map
+            [ MAP ]
           </button>
           <button
             onClick={() => setMapStyle('satellite')}
-            className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
+            className={`px-3 py-1 font-bold uppercase transition-colors cursor-pointer ${
               mapStyle === 'satellite'
-                ? 'bg-emerald-600 text-white shadow-sm'
-                : 'text-zinc-400 hover:text-white'
+                ? 'bg-[#d92626] text-white dark:bg-[#ef4444] dark:text-white'
+                : 'text-zinc-600 dark:text-zinc-400 hover:text-black dark:hover:text-white'
             }`}
           >
-            Satellite
+            [ SATELLITE ]
           </button>
         </div>
       )}
 
       {/* Modern Zoom & Reset Controls */}
-      <div className="absolute bottom-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl p-0.5 shadow-md">
+      <div className="absolute bottom-3 right-3 z-[1000] flex items-center border-2 border-black dark:border-zinc-300 bg-white dark:bg-zinc-900 shadow-none font-mono divide-x-2 divide-black dark:divide-zinc-300">
         <button
           onClick={handleZoomIn}
-          className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors cursor-pointer"
+          className="p-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black text-black dark:text-white transition-colors cursor-pointer"
           title="Zoom In"
         >
           <ZoomIn className="w-4 h-4" />
         </button>
         <button
           onClick={handleZoomOut}
-          className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors cursor-pointer"
+          className="p-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black text-black dark:text-white transition-colors cursor-pointer"
           title="Zoom Out"
         >
           <ZoomOut className="w-4 h-4" />
         </button>
         <button
           onClick={handleReset}
-          className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors cursor-pointer"
+          className="p-1.5 hover:bg-black hover:text-white dark:hover:bg-white dark:hover:text-black text-black dark:text-white transition-colors cursor-pointer"
           title="Reset to Border"
         >
           <RotateCcw className="w-3.5 h-3.5" />

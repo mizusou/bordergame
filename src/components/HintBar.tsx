@@ -84,37 +84,33 @@ export const HintBar: React.FC<HintBarProps> = ({
   ];
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 font-sans">
-      <div className="flex items-center justify-between text-xs text-zinc-400 px-1 font-medium">
-        <span>Progressive Hints</span>
-        <span className="text-[11px] text-zinc-500">Unlocks on wrong attempts</span>
+    <div className="w-full flex flex-col gap-2 font-mono text-xs">
+      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] text-black dark:text-zinc-300">
+        <span>EXHIBITION DOSSIER // CARTOGRAPHIC NOTES</span>
+        <span className="text-zinc-500">[ REVEALS PROGRESSIVELY ]</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
-        {hints.map((hint) => {
-          const Icon = hint.icon;
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+        {hints.map((hint, idx) => {
           return (
             <div
               key={hint.title}
-              className={`p-3 min-h-[72px] rounded-2xl border flex flex-col justify-between gap-1 transition-all shadow-sm ${
+              className={`p-2.5 border-2 flex flex-col justify-between gap-1 transition-all sharp-box ${
                 hint.unlocked
-                  ? 'border-zinc-700 bg-zinc-900/90 text-zinc-100'
-                  : 'border-zinc-800/60 bg-zinc-950/40 text-zinc-600'
+                  ? 'border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 text-black dark:text-zinc-100'
+                  : 'border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-950/40 text-zinc-400 dark:text-zinc-600'
               }`}
             >
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                  <Icon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                  <span>{hint.title}</span>
-                </span>
-                {!hint.unlocked && <Lock className="w-3 h-3 text-zinc-600 shrink-0" />}
+              <div className="flex items-center justify-between uppercase font-bold text-[10px]">
+                <span>0{idx + 1} / {hint.title}</span>
+                {!hint.unlocked && <Lock className="w-3 h-3 shrink-0" />}
               </div>
 
-              <div className="text-xs font-medium leading-snug break-words">
+              <div className="text-xs font-bold leading-tight uppercase truncate">
                 {hint.unlocked ? (
-                  <span className="text-white font-semibold">{hint.content}</span>
+                  <span className="text-black dark:text-zinc-100 font-bold">{hint.content}</span>
                 ) : (
-                  <span className="text-zinc-600 text-[11px]">{hint.lockedLabel}</span>
+                  <span className="text-zinc-400 dark:text-zinc-600 font-normal text-[10px]">[ LOCKED ]</span>
                 )}
               </div>
             </div>
