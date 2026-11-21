@@ -107,12 +107,13 @@ export function formatCoordinates(coord: [number, number]): string {
 }
 
 /**
- * Format lat band into a progressive hint string
+ * Format lat band into a concise progressive hint string (e.g. ~5°N (North))
  */
 export function formatLatBand(lat: number): string {
-  const hemi = lat >= 0 ? 'Northern Hemisphere' : 'Southern Hemisphere';
+  const hemiWord = lat >= 0 ? 'North' : 'South';
+  const hemiDir = lat >= 0 ? 'N' : 'S';
   const roundedLat = Math.round(Math.abs(lat));
-  return `${hemi} • ~${roundedLat}°${lat >= 0 ? 'N' : 'S'}`;
+  return `~${roundedLat}°${hemiDir} (${hemiWord})`;
 }
 
 /**

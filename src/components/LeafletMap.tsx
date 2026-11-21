@@ -222,41 +222,35 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     }
 
-    // 5. Country Side Labels
-    const showA =
-      isGameOver ||
-      lockedCountry === border.countryA.name ||
-      guessedCountries.includes(border.countryA.name);
+    // 5. Country Side Labels (Only show during active gameplay when a country is half-matched/locked; hide during game-over reveal since the real basemap already displays official country typography)
+    if (!isGameOver) {
+      const showA =
+        lockedCountry === border.countryA.name ||
+        guessedCountries.includes(border.countryA.name);
 
-    const showB =
-      isGameOver ||
-      lockedCountry === border.countryB.name ||
-      guessedCountries.includes(border.countryB.name);
+      const showB =
+        lockedCountry === border.countryB.name ||
+        guessedCountries.includes(border.countryB.name);
 
-    if (showA && border.sideAAnchor) {
-      const transformClass = showB
-        ? 'transform -translate-x-1/2 -translate-y-[130%]'
-        : 'transform -translate-x-1/2 -translate-y-1/2';
-      const iconA = L.divIcon({
-        className: 'custom-map-label',
-        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap ${transformClass}">${border.countryA.name}</div>`,
-        iconSize: [0, 0],
-      });
-      const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
-      vectorGroup.addLayer(markerA);
-    }
+      if (showA && border.sideAAnchor) {
+        const iconA = L.divIcon({
+          className: 'custom-map-label',
+          html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryA.name}</div>`,
+          iconSize: [0, 0],
+        });
+        const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
+        vectorGroup.addLayer(markerA);
+      }
 
-    if (showB && border.sideBAnchor) {
-      const transformClass = showA
-        ? 'transform -translate-x-1/2 translate-y-[30%]'
-        : 'transform -translate-x-1/2 -translate-y-1/2';
-      const iconB = L.divIcon({
-        className: 'custom-map-label',
-        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap ${transformClass}">${border.countryB.name}</div>`,
-        iconSize: [0, 0],
-      });
-      const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
-      vectorGroup.addLayer(markerB);
+      if (showB && border.sideBAnchor) {
+        const iconB = L.divIcon({
+          className: 'custom-map-label',
+          html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryB.name}</div>`,
+          iconSize: [0, 0],
+        });
+        const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
+        vectorGroup.addLayer(markerB);
+      }
     }
 
     // Fit view

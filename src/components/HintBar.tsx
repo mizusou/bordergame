@@ -15,8 +15,37 @@ export const HintBar: React.FC<HintBarProps> = ({
   isGameOver,
 }) => {
   const regionString = (() => {
+    const cleanRegion = (r: string) => {
+      const map: Record<string, string> = {
+        'Eastern Africa': 'East Africa',
+        'Western Africa': 'West Africa',
+        'Northern Africa': 'North Africa',
+        'Southern Africa': 'Southern Africa',
+        'Middle Africa': 'Central Africa',
+        'Western Europe': 'West Europe',
+        'Eastern Europe': 'East Europe',
+        'Northern Europe': 'North Europe',
+        'Southern Europe': 'South Europe',
+        'South-Eastern Asia': 'Southeast Asia',
+        'Southern Asia': 'South Asia',
+        'Western Asia': 'West Asia',
+        'Eastern Asia': 'East Asia',
+        'Central Asia': 'Central Asia',
+        'South America': 'South America',
+        'Central America': 'Central America',
+        'Northern America': 'North America',
+      };
+      return map[r] || r;
+    };
+
+    const regA = cleanRegion(border.countryA.region);
+    const regB = cleanRegion(border.countryB.region);
+
+    if (regA && regA === regB) {
+      return regA;
+    }
     if (border.countryA.continent === border.countryB.continent) {
-      return `${border.countryA.continent} (${border.countryA.region || border.countryB.region})`;
+      return regA || regB || border.countryA.continent;
     }
     return `${border.countryA.continent} / ${border.countryB.continent}`;
   })();
@@ -67,7 +96,7 @@ export const HintBar: React.FC<HintBarProps> = ({
           return (
             <div
               key={hint.title}
-              className={`p-3 rounded-2xl border flex flex-col justify-between gap-1.5 transition-all shadow-sm ${
+              className={`p-3 min-h-[72px] rounded-2xl border flex flex-col justify-between gap-1 transition-all shadow-sm ${
                 hint.unlocked
                   ? 'border-zinc-700 bg-zinc-900/90 text-zinc-100'
                   : 'border-zinc-800/60 bg-zinc-950/40 text-zinc-600'
@@ -75,13 +104,13 @@ export const HintBar: React.FC<HintBarProps> = ({
             >
               <div className="flex items-center justify-between">
                 <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
-                  <Icon className="w-3.5 h-3.5 text-zinc-400" />
+                  <Icon className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
                   <span>{hint.title}</span>
                 </span>
-                {!hint.unlocked && <Lock className="w-3 h-3 text-zinc-600" />}
+                {!hint.unlocked && <Lock className="w-3 h-3 text-zinc-600 shrink-0" />}
               </div>
 
-              <div className="text-xs font-medium truncate">
+              <div className="text-xs font-medium leading-snug break-words">
                 {hint.unlocked ? (
                   <span className="text-white font-semibold">{hint.content}</span>
                 ) : (
