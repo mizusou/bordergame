@@ -234,9 +234,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       guessedCountries.includes(border.countryB.name);
 
     if (showA && border.sideAAnchor) {
+      const transformClass = showB
+        ? 'transform -translate-x-1/2 -translate-y-[130%]'
+        : 'transform -translate-x-1/2 -translate-y-1/2';
       const iconA = L.divIcon({
         className: 'custom-map-label',
-        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-lg border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryA.name}</div>`,
+        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap ${transformClass}">${border.countryA.name}</div>`,
         iconSize: [0, 0],
       });
       const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
@@ -244,9 +247,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }
 
     if (showB && border.sideBAnchor) {
+      const transformClass = showA
+        ? 'transform -translate-x-1/2 translate-y-[30%]'
+        : 'transform -translate-x-1/2 -translate-y-1/2';
       const iconB = L.divIcon({
         className: 'custom-map-label',
-        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-lg border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryB.name}</div>`,
+        html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap ${transformClass}">${border.countryB.name}</div>`,
         iconSize: [0, 0],
       });
       const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
@@ -280,7 +286,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
       {/* Floating Basemap Toggle (When game is over) */}
       {isGameOver && (
-        <div className="absolute top-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
+        <div className="absolute top-3.5 right-3.5 z-10 flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
           <button
             onClick={() => setMapStyle('dark')}
             className={`px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
@@ -305,7 +311,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       )}
 
       {/* Modern Zoom & Reset Controls */}
-      <div className="absolute bottom-3.5 right-3.5 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl p-0.5 shadow-md">
+      <div className="absolute bottom-3.5 right-3.5 z-10 flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-xl p-0.5 shadow-md">
         <button
           onClick={handleZoomIn}
           className="p-1.5 hover:bg-zinc-800 text-zinc-300 rounded-lg transition-colors cursor-pointer"

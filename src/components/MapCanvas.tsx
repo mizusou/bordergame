@@ -25,7 +25,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
   const [viewMode, setViewMode] = useState<'map' | 'globe'>('map');
 
   return (
-    <div className="relative w-full h-[380px] sm:h-[440px] md:h-[480px] bg-[#0c0d12] rounded-3xl border border-zinc-800/80 overflow-hidden shadow-2xl transition-all">
+    <div className="relative isolate w-full h-[380px] sm:h-[440px] md:h-[480px] bg-[#0c0d12] rounded-3xl border border-zinc-800/80 overflow-hidden shadow-2xl transition-all">
       {/* View Mode Component: Real Leaflet Map or 3D Interactive Globe */}
       {viewMode === 'map' ? (
         <LeafletMap
@@ -47,7 +47,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       )}
 
       {/* TOP-LEFT: Clean Legend Pill & Coordinates */}
-      <div className="absolute top-3.5 left-3.5 z-[1000] flex flex-col gap-1.5 pointer-events-none">
+      <div className="absolute top-3.5 left-3.5 z-10 flex flex-col gap-1.5 pointer-events-none">
         <div className="flex items-center gap-2.5 bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-full border border-zinc-800 text-[11px] text-zinc-300 shadow-md">
           <div className="flex items-center gap-1.5">
             <span className="w-2.5 h-2.5 rounded-full bg-sky-500 border border-sky-300 inline-block shadow-sm" />
@@ -66,7 +66,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       </div>
 
       {/* TOP-CENTER: Mode Switcher [ Real Map ] | [ 3D Globe ] */}
-      <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-[1000] flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
+      <div className="absolute top-3.5 left-1/2 -translate-x-1/2 z-10 flex items-center bg-zinc-900/90 backdrop-blur-md border border-zinc-800 rounded-full p-1 shadow-md">
         <button
           onClick={() => setViewMode('map')}
           className={`flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition-all cursor-pointer ${
@@ -94,7 +94,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
 
       {/* BOTTOM-LEFT: Scale & Length Info Pill */}
       {(unlockedHints >= 1 || isGameOver) && (
-        <div className="absolute bottom-3.5 left-3.5 z-[1000] bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-800 text-[11px] shadow-md flex items-center gap-2 pointer-events-none animate-fade-in">
+        <div className="absolute bottom-3.5 left-3.5 z-10 bg-zinc-900/90 backdrop-blur-md px-3 py-1.5 rounded-xl border border-zinc-800 text-[11px] shadow-md flex items-center gap-2 pointer-events-none animate-fade-in">
           <span className="text-emerald-400 font-semibold font-mono">
             {border.lengthKm.toLocaleString()} km
           </span>

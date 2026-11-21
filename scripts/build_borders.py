@@ -11,7 +11,7 @@ import re
 import requests
 from collections import defaultdict
 from shapely.geometry import shape, mapping, Point, LineString, MultiLineString, Polygon, MultiPolygon
-from shapely.ops import linemerge
+from shapely.ops import linemerge, unary_union
 
 CACHE_DIR = "data_cache"
 BOUNDARIES_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_boundary_lines_land.geojson"
@@ -26,7 +26,7 @@ OUT_WORLD_REVEAL_FILE = "src/data/world_reveal.json"
 EXCLUDED_ENTITIES = {
     "Hong Kong", "Macao", "Siachen Glacier", "Baikonur", "Sint Maarten", "St-Martin",
     "Cyprus U.N. Buffer Zone", "Cyprus No Mans Area", "Brazilian Island", "Antarctica",
-    "Vatican", "Monaco", "Gibraltar", "Akrotiri", "Dhekelia", "Clipperton I."
+    "Vatican", "Monaco", "Gibraltar", "Akrotiri", "Dhekelia", "Clipperton I.", "Somaliland"
 }
 
 def download_if_missing(url, dest_path):
@@ -123,6 +123,12 @@ def main():
         if p.get('ADMIN'): country_by_name[p['ADMIN'].lower()] = name
         if p.get('SOVEREIGNT'): country_by_name[p['SOVEREIGNT'].lower()] = name
 
+    # Merge Somaliland geometry into Somalia geometry so Somalia polygon is complete
+    sol_feat = next((c for c in countries_data['features'] if c['properties'].get('NAME') == 'Somaliland' or c['properties'].get('ADM0_A3') == 'SOL'), None)
+    if sol_feat and 'Somalia' in country_features:
+        sol_geom = shape(sol_feat['geometry'])
+        country_features['Somalia']['geom'] = unary_union([country_features['Somalia']['geom'], sol_geom])
+
     # Alias / fixup map for boundary records
     aliases = {
         'US1': 'United States of America',
@@ -133,6 +139,8 @@ def main():
         'RUS': 'Russia',
         'Russian Federation': 'Russia',
         'CHN': 'China',
+        'SOL': 'Somalia',
+        'Somaliland': 'Somalia',
         'Korea, North': 'North Korea',
         'Korea, South': 'South Korea',
         'Dem. Rep. Korea': 'North Korea',
