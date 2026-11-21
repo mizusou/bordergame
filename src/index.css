@@ -50,3 +50,9 @@
 ::-webkit-scrollbar-thumb:hover {
   background: #3f3f46;
 }
+
+/* Leaflet Custom DivIcon Overrides */
+.custom-map-label {
+  background: transparent !important;
+  border: none !important;
+}

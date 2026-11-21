@@ -284,7 +284,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         // 5c. Country Label Badge
         const iconA = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/95 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400/90 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm inline-block"></span><span>${border.countryA.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryA.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
@@ -324,7 +324,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         // 5c. Country Label Badge
         const iconB = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/95 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400/90 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm inline-block"></span><span>${border.countryB.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryB.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
