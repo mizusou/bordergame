@@ -33,10 +33,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     if (lockedCountry) {
       setCountry1(lockedCountry);
       setQuery1(lockedCountry);
-      setTimeout(() => {
-        input2Ref.current?.focus();
-        setActiveSlot(2);
-      }, 100);
+      setActiveSlot(null);
     }
   }, [lockedCountry]);
 
@@ -170,16 +167,19 @@ export const GuessInput: React.FC<GuessInputProps> = ({
 
     onMakeGuess(c1, c2);
 
+    // Close any open autocomplete dropdown and blur inputs so history is fully visible
+    setActiveSlot(null);
+    input1Ref.current?.blur();
+    input2Ref.current?.blur();
+
     if (!lockedCountry) {
       setCountry1('');
       setQuery1('');
       setCountry2('');
       setQuery2('');
-      input1Ref.current?.focus();
     } else {
       setCountry2('');
       setQuery2('');
-      input2Ref.current?.focus();
     }
     setValidationError(null);
   };
