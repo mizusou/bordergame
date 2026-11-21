@@ -22,6 +22,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
   const [query2, setQuery2] = useState<string>('');
 
   const [activeSlot, setActiveSlot] = useState<1 | 2 | null>(null);
+  const [dropdownOpen, setDropdownOpen] = useState<boolean>(false);
   const [highlightedIndex, setHighlightedIndex] = useState<number>(0);
   const [validationError, setValidationError] = useState<string | null>(null);
 
@@ -33,7 +34,13 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     if (lockedCountry) {
       setCountry1(lockedCountry);
       setQuery1(lockedCountry);
-      setActiveSlot(null);
+      setCountry2('');
+      setQuery2('');
+      setActiveSlot(2);
+      setDropdownOpen(false);
+      setTimeout(() => {
+        input2Ref.current?.focus();
+      }, 20);
     }
   }, [lockedCountry]);
 
@@ -78,9 +85,10 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(e.target as Node) &&
-        !input1Ref.current?.contains(e.target as Node) &&
-        !input2Ref.current?.contains(e.target as Node)
+        !input1Ref.current?.parentElement?.contains(e.target as Node) &&
+        !input2Ref.current?.parentElement?.contains(e.target as Node)
       ) {
+        setDropdownOpen(false);
         setActiveSlot(null);
       }
     }
@@ -94,39 +102,54 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       setCountry1(name);
       setQuery1(name);
       setActiveSlot(2);
+      setDropdownOpen(false);
       setHighlightedIndex(0);
-      input2Ref.current?.focus();
+      setTimeout(() => {
+        input2Ref.current?.focus();
+      }, 20);
     } else {
       setCountry2(name);
       setQuery2(name);
       setActiveSlot(null);
+      setDropdownOpen(false);
     }
   };
 
   const handleKeyDown = (e: React.KeyboardEvent, slot: 1 | 2) => {
-    if (!activeSlot) return;
-
     if (e.key === 'ArrowDown') {
       e.preventDefault();
-      setHighlightedIndex((prev) =>
-        prev < currentSuggestions.length - 1 ? prev + 1 : 0
-      );
+      if (!dropdownOpen) {
+        setActiveSlot(slot);
+        setDropdownOpen(true);
+        setHighlightedIndex(0);
+      } else {
+        setHighlightedIndex((prev) =>
+          prev < currentSuggestions.length - 1 ? prev + 1 : 0
+        );
+      }
     } else if (e.key === 'ArrowUp') {
       e.preventDefault();
-      setHighlightedIndex((prev) =>
-        prev > 0 ? prev - 1 : currentSuggestions.length - 1
-      );
+      if (!dropdownOpen) {
+        setActiveSlot(slot);
+        setDropdownOpen(true);
+        setHighlightedIndex(currentSuggestions.length - 1);
+      } else {
+        setHighlightedIndex((prev) =>
+          prev > 0 ? prev - 1 : currentSuggestions.length - 1
+        );
+      }
     } else if (e.key === 'Enter') {
-      e.preventDefault();
-      if (currentSuggestions[highlightedIndex]) {
+      if (dropdownOpen && currentSuggestions[highlightedIndex]) {
+        e.preventDefault();
         selectCountry(currentSuggestions[highlightedIndex].name, slot);
-      } else if (country1 && country2) {
+      } else if (country1.trim() && country2.trim()) {
+        e.preventDefault();
         handleSubmit();
       }
     } else if (e.key === 'Escape') {
-      setActiveSlot(null);
+      setDropdownOpen(false);
     } else if (e.key === 'Tab' && slot === 1 && !e.shiftKey) {
-      if (currentSuggestions[highlightedIndex]) {
+      if (dropdownOpen && currentSuggestions[highlightedIndex]) {
         e.preventDefault();
         selectCountry(currentSuggestions[highlightedIndex].name, 1);
       }
@@ -167,21 +190,27 @@ export const GuessInput: React.FC<GuessInputProps> = ({
 
     onMakeGuess(c1, c2);
 
-    // Close any open autocomplete dropdown and blur inputs so history is fully visible
-    setActiveSlot(null);
-    input1Ref.current?.blur();
-    input2Ref.current?.blur();
+    // Keep active input focused for immediate typing, but ensure dropdown is closed
+    setDropdownOpen(false);
+    setValidationError(null);
 
     if (!lockedCountry) {
       setCountry1('');
       setQuery1('');
       setCountry2('');
       setQuery2('');
+      setActiveSlot(1);
+      setTimeout(() => {
+        input1Ref.current?.focus();
+      }, 20);
     } else {
       setCountry2('');
       setQuery2('');
+      setActiveSlot(2);
+      setTimeout(() => {
+        input2Ref.current?.focus();
+      }, 20);
     }
-    setValidationError(null);
   };
 
   return (
@@ -211,15 +240,16 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 value={query1}
                 disabled={disabled || Boolean(lockedCountry)}
                 onChange={(e) => {
-                  setQuery1(e.target.value);
-                  setCountry1(e.target.value);
+                  const val = e.target.value;
+                  setQuery1(val);
+                  setCountry1(val);
                   setActiveSlot(1);
+                  setDropdownOpen(val.trim().length > 0);
                   setHighlightedIndex(0);
                 }}
                 onFocus={() => {
                   if (!lockedCountry) {
                     setActiveSlot(1);
-                    setHighlightedIndex(0);
                   }
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 1)}
@@ -231,9 +261,30 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                   LOCKED
                 </span>
               ) : (
-                <span className="text-zinc-400 dark:text-zinc-600 text-xs sm:text-sm shrink-0 select-none">
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  onMouseDown={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                  }}
+                  onClick={(e) => {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    if (activeSlot === 1 && dropdownOpen) {
+                      setDropdownOpen(false);
+                    } else {
+                      setActiveSlot(1);
+                      setDropdownOpen(true);
+                      setHighlightedIndex(0);
+                      input1Ref.current?.focus();
+                    }
+                  }}
+                  className="text-zinc-400 dark:text-zinc-500 hover:text-black dark:hover:text-white text-xs sm:text-sm shrink-0 select-none p-1 transition-colors cursor-pointer"
+                  title="Toggle country list"
+                >
                   ▾
-                </span>
+                </button>
               )}
             </div>
           </div>
@@ -247,22 +298,44 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 value={query2}
                 disabled={disabled}
                 onChange={(e) => {
-                  setQuery2(e.target.value);
-                  setCountry2(e.target.value);
+                  const val = e.target.value;
+                  setQuery2(val);
+                  setCountry2(val);
                   setActiveSlot(2);
+                  setDropdownOpen(val.trim().length > 0);
                   setHighlightedIndex(0);
                 }}
                 onFocus={() => {
                   setActiveSlot(2);
-                  setHighlightedIndex(0);
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 2)}
                 placeholder={country1 ? 'Neighboring country 2...' : 'Country 2...'}
                 className="w-full bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-bold font-mono text-xs sm:text-sm uppercase"
               />
-              <span className="text-zinc-400 dark:text-zinc-600 text-xs sm:text-sm shrink-0 select-none">
+              <button
+                type="button"
+                tabIndex={-1}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  if (activeSlot === 2 && dropdownOpen) {
+                    setDropdownOpen(false);
+                  } else {
+                    setActiveSlot(2);
+                    setDropdownOpen(true);
+                    setHighlightedIndex(0);
+                    input2Ref.current?.focus();
+                  }
+                }}
+                className="text-zinc-400 dark:text-zinc-500 hover:text-black dark:hover:text-white text-xs sm:text-sm shrink-0 select-none p-1 transition-colors cursor-pointer"
+                title="Toggle country list"
+              >
                 ▾
-              </span>
+              </button>
             </div>
           </div>
         </div>
@@ -278,7 +351,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       </form>
 
       {/* Autocomplete Dropdown List */}
-      {activeSlot !== null && currentSuggestions.length > 0 && !disabled && (
+      {dropdownOpen && activeSlot !== null && currentSuggestions.length > 0 && !disabled && (
         <div
           ref={dropdownRef}
           className="absolute z-40 top-full mt-1 w-full border-2 border-black dark:border-zinc-300 bg-white dark:bg-zinc-900 shadow-2xl max-h-60 overflow-y-auto text-xs p-1 font-mono sharp-box"
@@ -300,6 +373,10 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 key={item.name}
                 type="button"
                 onMouseEnter={() => setHighlightedIndex(idx)}
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  selectCountry(item.name, activeSlot);
+                }}
                 onClick={() => selectCountry(item.name, activeSlot)}
                 className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors cursor-pointer uppercase font-bold text-xs ${
                   isHighlighted
