@@ -90,7 +90,7 @@ export default function App() {
   // Trigger celebration confetti
   const triggerWinConfetti = useCallback(() => {
     try {
-      const count = 200;
+      const count = 180;
       const defaults = { origin: { y: 0.7 } };
 
       const fire = (particleRatio: number, opts: confetti.Options) => {
@@ -116,7 +116,7 @@ export default function App() {
     if (currentStatus !== 'playing') {
       const timer = setTimeout(() => {
         setIsGameOverOpen(true);
-      }, 1200);
+      }, 1000);
       return () => clearTimeout(timer);
     }
   }, [currentStatus]);
@@ -220,12 +220,10 @@ export default function App() {
     setIsGameOverOpen(false);
   };
 
-  // Already guessed pairs list for duplicate check
   const alreadyGuessedPairs: Array<[string, string]> = useMemo(() => {
     return currentGuesses.map((g) => [g.country1, g.country2]);
   }, [currentGuesses]);
 
-  // Correctly identified half or full matches
   const guessedCountriesList = useMemo(() => {
     const list: string[] = [];
     for (const g of currentGuesses) {
@@ -239,8 +237,8 @@ export default function App() {
   }, [currentGuesses, currentBorder]);
 
   return (
-    <div className="min-h-screen bg-[#080c14] text-slate-100 flex flex-col font-sans selection:bg-cyan-500/20 selection:text-cyan-200">
-      {/* HUD Header */}
+    <div className="min-h-screen bg-[#09090b] text-zinc-100 flex flex-col font-sans selection:bg-emerald-500/20 selection:text-emerald-200">
+      {/* Header */}
       <Header
         isDaily={mode === 'daily'}
         dayNumber={getDayNumber(todayStr)}
@@ -249,25 +247,25 @@ export default function App() {
         onOpenStats={() => setIsStatsOpen(true)}
       />
 
-      {/* Main Mission Control Body */}
-      <main className="flex-1 w-full max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4 flex flex-col gap-3 sm:gap-4">
-        {/* Practice Mode Alert Header */}
+      {/* Main Content */}
+      <main className="flex-1 w-full max-w-2xl mx-auto px-4 py-4 sm:py-6 flex flex-col gap-4">
+        {/* Practice Mode Banner */}
         {mode === 'practice' && (
-          <div className="bg-purple-950/30 border border-purple-500/40 text-purple-200 px-3 py-1.5 rounded-lg text-xs font-mono flex items-center justify-between shadow-sm animate-fade-in">
-            <span className="flex items-center gap-1.5">
-              <span className="w-2 h-2 rounded-full bg-purple-400 animate-pulse" />
-              <span>PRACTICE MODE ACTIVE // UNLIMITED RECONNAISSANCE</span>
+          <div className="bg-emerald-950/20 border border-emerald-500/30 text-emerald-300 px-4 py-2 rounded-2xl text-xs font-medium flex items-center justify-between shadow-sm animate-fade-in">
+            <span className="flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span>Practice Mode active</span>
             </span>
             <button
               onClick={handleStartPractice}
-              className="text-purple-300 hover:text-purple-100 underline text-[11px] font-bold"
+              className="text-emerald-300 hover:text-white font-semibold underline cursor-pointer"
             >
-              NEXT BORDER →
+              Next Border →
             </button>
           </div>
         )}
 
-        {/* Map Canvas: Centered North-Up Target Border Line */}
+        {/* Map Canvas */}
         <MapCanvas
           border={currentBorder}
           unlockedHints={wrongGuessesCount}
@@ -277,7 +275,7 @@ export default function App() {
           isWon={currentStatus === 'won'}
         />
 
-        {/* Two-Slot Autocomplete Input */}
+        {/* Dual Input */}
         <GuessInput
           lockedCountry={currentLockedCountry}
           onMakeGuess={handleMakeGuess}
@@ -285,20 +283,20 @@ export default function App() {
           alreadyGuessedPairs={alreadyGuessedPairs}
         />
 
-        {/* Progressive Intel Hint Bar */}
+        {/* Hints Bar */}
         <HintBar
           border={currentBorder}
           wrongGuessesCount={wrongGuessesCount}
           isGameOver={currentStatus !== 'playing'}
         />
 
-        {/* Guess Recon Log History */}
+        {/* Guess History */}
         <GuessHistory guesses={currentGuesses} maxGuesses={6} />
       </main>
 
-      {/* Footer */}
-      <footer className="border-t border-slate-900 py-3 px-4 text-center text-[11px] font-mono text-slate-600">
-        <span>BORDERLINE // 100% CLIENT-SIDE CARTOGRAPHY // NATURAL EARTH GIS</span>
+      {/* Minimal Footer */}
+      <footer className="border-t border-zinc-900 py-4 px-4 text-center text-xs text-zinc-600">
+        <span>BORDERLINE · 100% Client-Side GIS</span>
       </footer>
 
       {/* Modals */}

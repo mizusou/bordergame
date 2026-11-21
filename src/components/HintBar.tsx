@@ -5,7 +5,7 @@ import { Lock, Ruler, GitFork, Globe, Compass } from 'lucide-react';
 
 interface HintBarProps {
   border: BorderItem;
-  wrongGuessesCount: number; // 0..6
+  wrongGuessesCount: number;
   isGameOver: boolean;
 }
 
@@ -14,7 +14,6 @@ export const HintBar: React.FC<HintBarProps> = ({
   wrongGuessesCount,
   isGameOver,
 }) => {
-  // Region/Continent string: if both in same continent, show continent, else continent1 / continent2
   const regionString = (() => {
     if (border.countryA.continent === border.countryB.continent) {
       return `${border.countryA.continent} (${border.countryA.region || border.countryB.region})`;
@@ -26,49 +25,40 @@ export const HintBar: React.FC<HintBarProps> = ({
 
   const hints = [
     {
-      level: 1,
-      title: 'BORDER LENGTH',
+      title: 'Length',
       icon: Ruler,
       unlocked: wrongGuessesCount >= 1 || isGameOver,
-      content: `${border.lengthKm.toLocaleString()} KM`,
-      lockedLabel: '1 WRONG GUESS',
+      content: `${border.lengthKm.toLocaleString()} km`,
+      lockedLabel: '1 wrong guess',
     },
     {
-      level: 2,
-      title: 'CONTEXT STUBS',
+      title: 'Context',
       icon: GitFork,
       unlocked: wrongGuessesCount >= 2 || isGameOver,
-      content: `${border.contextStubs.length} STUBS SHOWN ON MAP`,
-      lockedLabel: '2 WRONG GUESSES',
+      content: `${border.contextStubs.length} stubs visible`,
+      lockedLabel: '2 wrong guesses',
     },
     {
-      level: 3,
-      title: 'REGION / CONTINENT',
+      title: 'Region',
       icon: Globe,
       unlocked: wrongGuessesCount >= 3 || isGameOver,
       content: regionString,
-      lockedLabel: '3 WRONG GUESSES',
+      lockedLabel: '3 wrong guesses',
     },
     {
-      level: 4,
-      title: 'COORDINATE BAND',
+      title: 'Latitude',
       icon: Compass,
       unlocked: wrongGuessesCount >= 4 || isGameOver,
       content: latBandString,
-      lockedLabel: '4 WRONG GUESSES',
+      lockedLabel: '4 wrong guesses',
     },
   ];
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-1.5 font-mono">
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span className="font-bold tracking-wider text-slate-400 flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-ping" />
-          <span>PROGRESSIVE INTEL</span>
-        </span>
-        <span className="text-[10px] text-slate-500">
-          AUTOMATICALLY UNLOCKED AS YOU GUESS
-        </span>
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 font-sans">
+      <div className="flex items-center justify-between text-xs text-zinc-400 px-1 font-medium">
+        <span>Progressive Hints</span>
+        <span className="text-[11px] text-zinc-500">Unlocks on wrong attempts</span>
       </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
@@ -77,27 +67,25 @@ export const HintBar: React.FC<HintBarProps> = ({
           return (
             <div
               key={hint.title}
-              className={`p-2.5 rounded-lg border flex flex-col justify-between gap-1 transition-all ${
+              className={`p-3 rounded-2xl border flex flex-col justify-between gap-1.5 transition-all shadow-sm ${
                 hint.unlocked
-                  ? 'border-cyan-500/40 bg-cyan-950/20 text-cyan-200 shadow-sm'
-                  : 'border-slate-800/80 bg-slate-900/40 text-slate-600'
+                  ? 'border-zinc-700 bg-zinc-900/90 text-zinc-100'
+                  : 'border-zinc-800/60 bg-zinc-950/40 text-zinc-600'
               }`}
             >
               <div className="flex items-center justify-between">
-                <span className="text-[9px] font-bold tracking-wider text-slate-400 flex items-center gap-1">
-                  <Icon className="w-3 h-3 text-cyan-400" />
+                <span className="text-xs font-semibold text-zinc-400 flex items-center gap-1.5">
+                  <Icon className="w-3.5 h-3.5 text-zinc-400" />
                   <span>{hint.title}</span>
                 </span>
-                {!hint.unlocked && <Lock className="w-2.5 h-2.5 text-slate-600" />}
+                {!hint.unlocked && <Lock className="w-3 h-3 text-zinc-600" />}
               </div>
 
-              <div className="text-[11px] font-semibold tracking-wide truncate">
+              <div className="text-xs font-medium truncate">
                 {hint.unlocked ? (
-                  <span className="text-cyan-300 font-bold">{hint.content}</span>
+                  <span className="text-white font-semibold">{hint.content}</span>
                 ) : (
-                  <span className="text-slate-600 text-[10px] tracking-tight">
-                    {hint.lockedLabel}
-                  </span>
+                  <span className="text-zinc-600 text-[11px]">{hint.lockedLabel}</span>
                 )}
               </div>
             </div>

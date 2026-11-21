@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { allCountries, getLandNeighbors, doShareLandBorder } from '../utils/neighbors.ts';
-import { Search, Lock, AlertTriangle, CornerDownLeft } from 'lucide-react';
+import { Search, Lock, AlertCircle, ArrowRight } from 'lucide-react';
 
 interface GuessInputProps {
   lockedCountry: string | null;
@@ -29,12 +29,10 @@ export const GuessInput: React.FC<GuessInputProps> = ({
   const input2Ref = useRef<HTMLInputElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Sync lockedCountry if parent updates it (half-match lock-in)
   useEffect(() => {
     if (lockedCountry) {
       setCountry1(lockedCountry);
       setQuery1(lockedCountry);
-      // Auto-focus slot 2
       setTimeout(() => {
         input2Ref.current?.focus();
         setActiveSlot(2);
@@ -42,7 +40,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     }
   }, [lockedCountry]);
 
-  // Compute suggestions for Slot 1
+  // Suggestions Slot 1
   const suggestions1 = useMemo(() => {
     if (!query1.trim()) return allCountries.slice(0, 10);
     const q = query1.toLowerCase().trim();
@@ -51,7 +49,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       .slice(0, 10);
   }, [query1]);
 
-  // Compute suggestions for Slot 2 (prioritizing land neighbors of country1 if selected!)
+  // Suggestions Slot 2
   const suggestions2 = useMemo(() => {
     const q = query2.toLowerCase().trim();
     const neighbors = country1 ? getLandNeighbors(country1) : [];
@@ -63,7 +61,6 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       );
     }
 
-    // Sort to put land neighbors of country1 FIRST!
     if (country1) {
       list = [...list].sort((a, b) => {
         const aIsNeighbor = neighbors.includes(a.name);
@@ -74,14 +71,11 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       });
     }
 
-    // Exclude country1 itself
     return list.filter((c) => c.name.toLowerCase() !== country1.toLowerCase()).slice(0, 12);
   }, [query2, country1]);
 
-  // Active suggestions based on focused slot
   const currentSuggestions = activeSlot === 1 ? suggestions1 : suggestions2;
 
-  // Handle outside click to close dropdown
   useEffect(() => {
     function handleClickOutside(e: MouseEvent) {
       if (
@@ -150,16 +144,15 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     const c2 = country2.trim();
 
     if (!c1 || !c2) {
-      setValidationError('Please select two neighboring sovereign countries.');
+      setValidationError('Select two neighboring countries.');
       return;
     }
 
     if (c1.toLowerCase() === c2.toLowerCase()) {
-      setValidationError('Please select two distinct countries.');
+      setValidationError('Please select two different countries.');
       return;
     }
 
-    // Check if already guessed
     const isDuplicate = alreadyGuessedPairs.some(
       ([g1, g2]) =>
         (g1.toLowerCase() === c1.toLowerCase() && g2.toLowerCase() === c2.toLowerCase()) ||
@@ -167,21 +160,16 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     );
 
     if (isDuplicate) {
-      setValidationError(`You already submitted ${c1} and ${c2}.`);
+      setValidationError(`Already guessed ${c1} & ${c2}.`);
       return;
     }
 
-    // Check if they share a land border
     if (!doShareLandBorder(c1, c2)) {
-      setValidationError(`Notice: ${c1} and ${c2} do not share a recognized land border.`);
-      // We still allow submitting after gentle warning or user can adjust
-      // Per instructions: "prioritize Country 2... still allow free typing with a gentle validation message if they don't share a border."
+      setValidationError(`Note: ${c1} and ${c2} do not share a land border.`);
     }
 
-    // Call submit
     onMakeGuess(c1, c2);
 
-    // Reset slot 2, keep locked country in slot 1 if locked
     if (!lockedCountry) {
       setCountry1('');
       setQuery1('');
@@ -198,26 +186,26 @@ export const GuessInput: React.FC<GuessInputProps> = ({
 
   return (
     <div className="relative w-full max-w-2xl mx-auto flex flex-col gap-2">
-      {/* Validation alert banner */}
+      {/* Validation Message */}
       {validationError && (
-        <div className="flex items-center gap-2 bg-amber-950/40 border border-amber-500/40 text-amber-300 px-3 py-1.5 rounded-lg text-xs font-mono animate-fade-in shadow-md">
-          <AlertTriangle className="w-4 h-4 shrink-0 text-amber-400" />
+        <div className="flex items-center gap-2 bg-amber-500/10 border border-amber-500/30 text-amber-300 px-3 py-2 rounded-xl text-xs font-sans animate-fade-in">
+          <AlertCircle className="w-4 h-4 shrink-0 text-amber-400" />
           <span>{validationError}</span>
         </div>
       )}
 
-      {/* Two-Slot Input Container */}
+      {/* Modern Dual-Input Card */}
       <form
         onSubmit={handleSubmit}
-        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-[#090f1d] border border-slate-800 p-2 rounded-xl shadow-xl focus-within:border-cyan-500/60 transition-all"
+        className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 bg-zinc-900/90 border border-zinc-800 p-2 rounded-2xl shadow-xl transition-all focus-within:border-zinc-700"
       >
-        {/* Slot 1: Country A */}
+        {/* Country 1 Input */}
         <div className="relative flex-1">
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800/80 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus-within:border-cyan-400 transition-colors">
+          <div className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-sm font-sans text-zinc-100 transition-colors focus-within:border-zinc-600">
             {lockedCountry ? (
               <Lock className="w-4 h-4 text-emerald-400 shrink-0" />
             ) : (
-              <Search className="w-4 h-4 text-slate-500 shrink-0" />
+              <Search className="w-4 h-4 text-zinc-500 shrink-0" />
             )}
             <input
               ref={input1Ref}
@@ -237,26 +225,26 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 }
               }}
               onKeyDown={(e) => handleKeyDown(e, 1)}
-              placeholder="FIRST COUNTRY..."
-              className="w-full bg-transparent focus:outline-none placeholder:text-slate-600 disabled:opacity-75 uppercase tracking-wide font-medium"
+              placeholder="Country 1..."
+              className="w-full bg-transparent focus:outline-none placeholder:text-zinc-600 disabled:opacity-85 font-medium tracking-tight text-sm"
             />
             {lockedCountry && (
-              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-mono font-bold">
-                LOCKED
+              <span className="text-[10px] bg-emerald-500/20 text-emerald-400 font-semibold px-2 py-0.5 rounded-full border border-emerald-500/30">
+                Locked
               </span>
             )}
           </div>
         </div>
 
-        {/* Tactical Link Indicator */}
-        <div className="hidden sm:flex items-center justify-center text-slate-600 font-mono text-xs px-0.5">
-          <span className="text-cyan-400/80 font-bold">⇌</span>
+        {/* Separator */}
+        <div className="hidden sm:flex items-center justify-center text-zinc-600 text-xs px-0.5 font-bold">
+          &amp;
         </div>
 
-        {/* Slot 2: Country B */}
+        {/* Country 2 Input */}
         <div className="relative flex-1">
-          <div className="flex items-center gap-2 bg-slate-900/90 border border-slate-800/80 rounded-lg px-3 py-2 text-sm font-mono text-slate-100 focus-within:border-cyan-400 transition-colors">
-            <Search className="w-4 h-4 text-slate-500 shrink-0" />
+          <div className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 rounded-xl px-3 py-2.5 text-sm font-sans text-zinc-100 transition-colors focus-within:border-zinc-600">
+            <Search className="w-4 h-4 text-zinc-500 shrink-0" />
             <input
               ref={input2Ref}
               type="text"
@@ -273,20 +261,20 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 setHighlightedIndex(0);
               }}
               onKeyDown={(e) => handleKeyDown(e, 2)}
-              placeholder="SECOND COUNTRY..."
-              className="w-full bg-transparent focus:outline-none placeholder:text-slate-600 uppercase tracking-wide font-medium"
+              placeholder={country1 ? 'Neighboring country 2...' : 'Country 2...'}
+              className="w-full bg-transparent focus:outline-none placeholder:text-zinc-600 font-medium tracking-tight text-sm"
             />
           </div>
         </div>
 
-        {/* Submit Button */}
+        {/* Submit Guess Button (Wordle / Mobbin high-contrast button) */}
         <button
           type="submit"
           disabled={disabled || !country1.trim() || !country2.trim()}
-          className="sm:w-auto px-5 py-2.5 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:bg-slate-800 text-[#090f1d] disabled:text-slate-500 font-mono font-bold text-xs tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-cyan-500/10 cursor-pointer disabled:cursor-not-allowed uppercase"
+          className="px-6 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 disabled:bg-zinc-800 text-white disabled:text-zinc-500 font-sans font-bold text-xs tracking-wider flex items-center justify-center gap-1.5 transition-all shadow-md shadow-emerald-500/10 cursor-pointer disabled:cursor-not-allowed uppercase"
         >
-          <span>SUBMIT</span>
-          <CornerDownLeft className="w-3.5 h-3.5" />
+          <span>Guess</span>
+          <ArrowRight className="w-3.5 h-3.5" />
         </button>
       </form>
 
@@ -294,12 +282,12 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       {activeSlot !== null && currentSuggestions.length > 0 && !disabled && (
         <div
           ref={dropdownRef}
-          className="absolute z-40 top-full mt-1.5 w-full bg-[#0a1120] border border-slate-700/80 rounded-xl shadow-2xl max-h-64 overflow-y-auto font-mono text-xs backdrop-blur-xl divide-y divide-slate-800/60"
+          className="absolute z-40 top-full mt-2 w-full bg-zinc-900 border border-zinc-800 rounded-2xl shadow-2xl max-h-64 overflow-y-auto text-xs backdrop-blur-2xl p-1.5"
         >
           {activeSlot === 2 && country1 && (
-            <div className="px-3 py-1.5 bg-slate-900/80 text-[10px] text-cyan-400 font-bold border-b border-slate-800 flex items-center justify-between">
-              <span>LAND NEIGHBORS OF {country1.toUpperCase()}</span>
-              <span className="text-slate-500 font-normal">RECOMMENDED</span>
+            <div className="px-3 py-1.5 text-[11px] font-semibold text-emerald-400 border-b border-zinc-800/80 mb-1 flex items-center justify-between">
+              <span>Land Neighbors of {country1}</span>
+              <span className="text-zinc-500 font-normal text-[10px]">Recommended</span>
             </div>
           )}
 
@@ -314,24 +302,24 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 type="button"
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onClick={() => selectCountry(item.name, activeSlot)}
-                className={`w-full text-left px-3.5 py-2 flex items-center justify-between transition-colors ${
+                className={`w-full text-left px-3.5 py-2.5 rounded-xl flex items-center justify-between transition-colors cursor-pointer ${
                   isHighlighted
-                    ? 'bg-cyan-500/20 text-cyan-100'
-                    : 'text-slate-300 hover:bg-slate-800/50'
+                    ? 'bg-zinc-800 text-white'
+                    : 'text-zinc-300 hover:bg-zinc-800/60'
                 }`}
               >
-                <div className="flex items-center gap-2">
-                  <span className="w-5 text-[10px] text-slate-500 font-semibold">{item.isoA2}</span>
-                  <span className="font-medium tracking-wide">{item.name}</span>
+                <div className="flex items-center gap-2.5">
+                  <span className="w-5 text-[10px] font-mono text-zinc-500">{item.isoA2}</span>
+                  <span className="font-medium tracking-tight text-sm">{item.name}</span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   {isNeighbor && (
-                    <span className="text-[9px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 px-1.5 py-0.5 rounded font-bold">
-                      NEIGHBOR
+                    <span className="text-[10px] bg-emerald-500/15 text-emerald-400 font-medium px-2 py-0.5 rounded-full border border-emerald-500/25">
+                      Neighbor
                     </span>
                   )}
-                  <span className="text-[10px] text-slate-500">{item.continent}</span>
+                  <span className="text-[11px] text-zinc-500">{item.continent}</span>
                 </div>
               </button>
             );

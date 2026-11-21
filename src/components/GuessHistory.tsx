@@ -1,6 +1,6 @@
 import React from 'react';
 import { GuessResult } from '../types/game.ts';
-import { CheckCircle2, Navigation, Target } from 'lucide-react';
+import { Check, Navigation } from 'lucide-react';
 
 interface GuessHistoryProps {
   guesses: GuessResult[];
@@ -14,30 +14,25 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
   const slots = Array.from({ length: maxGuesses }, (_, i) => guesses[i] || null);
 
   return (
-    <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 font-mono">
-      <div className="flex items-center justify-between text-xs text-slate-400 px-1">
-        <span className="flex items-center gap-1.5 font-bold tracking-wider">
-          <Target className="w-3.5 h-3.5 text-cyan-400" />
-          <span>RECON LOG</span>
-        </span>
-        <span className="text-[11px] text-slate-500">
-          ATTEMPTS: {guesses.length} / {maxGuesses}
+    <div className="w-full max-w-2xl mx-auto flex flex-col gap-2 font-sans">
+      <div className="flex items-center justify-between text-xs text-zinc-400 px-1 font-medium">
+        <span>Guesses</span>
+        <span className="font-mono text-zinc-500">
+          {guesses.length} of {maxGuesses}
         </span>
       </div>
 
       <div className="flex flex-col gap-1.5">
         {slots.map((guess, index) => {
-          const slotNum = String(index + 1).padStart(2, '0');
-
           if (!guess) {
             return (
               <div
                 key={`empty-${index}`}
-                className="h-10 px-3 rounded-lg border border-slate-800/60 bg-slate-900/30 flex items-center justify-between text-xs text-slate-700 select-none"
+                className="h-11 px-4 rounded-xl border border-zinc-800/60 bg-zinc-950/30 flex items-center justify-between text-xs text-zinc-700 select-none font-mono"
               >
-                <span className="font-bold text-slate-700">{slotNum}</span>
-                <span className="text-[10px] tracking-widest text-slate-700/80">
-                  --- AWAITING TELEMETRY ---
+                <span className="font-semibold text-zinc-700">0{index + 1}</span>
+                <span className="text-[11px] tracking-wider text-zinc-800 font-sans">
+                  Empty
                 </span>
                 <span className="w-4" />
               </div>
@@ -65,59 +60,60 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
           return (
             <div
               key={`guess-${index}`}
-              className={`min-h-11 px-3 py-1.5 rounded-lg border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-1.5 text-xs transition-all shadow-md animate-fade-in ${
+              className={`min-h-12 px-3 sm:px-4 py-2 rounded-xl border flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 text-xs transition-all shadow-sm animate-fade-in ${
                 isCorrect
-                  ? 'border-emerald-500/60 bg-emerald-950/30 text-emerald-200 shadow-[0_0_15px_rgba(16,185,129,0.15)]'
+                  ? 'border-emerald-500/50 bg-emerald-950/20 text-emerald-100 shadow-[0_0_15px_rgba(34,197,94,0.1)]'
                   : halfMatch !== 'none'
-                  ? 'border-cyan-500/50 bg-[#0a1526] text-slate-200'
-                  : 'border-slate-800 bg-slate-900/80 text-slate-300'
+                  ? 'border-zinc-700 bg-zinc-900/90 text-zinc-200'
+                  : 'border-zinc-800/90 bg-zinc-900/60 text-zinc-300'
               }`}
             >
-              {/* Left: Slot number & Country Names */}
-              <div className="flex items-center gap-2.5 flex-wrap">
-                <span className="font-bold text-slate-500">{slotNum}</span>
+              {/* Left: Slot number & Country Tiles (Wordle style) */}
+              <div className="flex items-center gap-2 flex-wrap">
+                <span className="font-mono text-[11px] font-semibold text-zinc-500 w-5">
+                  0{index + 1}
+                </span>
 
-                {/* Country 1 badge */}
+                {/* Country 1 Tile */}
                 <span
-                  className={`px-2 py-0.5 rounded font-medium tracking-wide ${
+                  className={`px-3 py-1 rounded-lg font-medium text-xs tracking-tight shadow-sm transition-all ${
                     isCorrect || isC1Half
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border border-slate-700/60'
+                      ? 'bg-emerald-600 text-white font-bold border border-emerald-500/80 shadow-emerald-950/50'
+                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/60'
                   }`}
                 >
                   {country1}
                 </span>
 
-                <span className="text-slate-600 font-bold">+</span>
+                <span className="text-zinc-600 font-bold text-xs">+</span>
 
-                {/* Country 2 badge */}
+                {/* Country 2 Tile */}
                 <span
-                  className={`px-2 py-0.5 rounded font-medium tracking-wide ${
+                  className={`px-3 py-1 rounded-lg font-medium text-xs tracking-tight shadow-sm transition-all ${
                     isCorrect || isC2Half
-                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40 font-bold'
-                      : 'bg-slate-800/80 text-slate-300 border border-slate-700/60'
+                      ? 'bg-emerald-600 text-white font-bold border border-emerald-500/80 shadow-emerald-950/50'
+                      : 'bg-zinc-800 text-zinc-200 border border-zinc-700/60'
                   }`}
                 >
                   {country2}
                 </span>
               </div>
 
-              {/* Right: Distance & Bearing Feedback */}
-              <div className="flex items-center gap-3 self-end sm:self-auto shrink-0">
+              {/* Right: Telemetry / Direction & Distance Pill */}
+              <div className="flex items-center gap-2.5 self-end sm:self-auto shrink-0">
                 {isCorrect ? (
-                  <div className="flex items-center gap-1.5 text-emerald-400 font-bold tracking-wider">
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>TARGET VERIFIED</span>
+                  <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/15 border border-emerald-500/30 text-emerald-400 font-semibold text-xs">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Solved!</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2.5 text-xs">
-                    {/* Compass Needle pointing from guess midpoint to target */}
+                  <div className="flex items-center gap-2 bg-zinc-950/80 border border-zinc-800/80 px-2.5 py-1 rounded-full text-xs font-mono">
                     <div
-                      className="flex items-center gap-1 text-cyan-400 font-semibold"
+                      className="flex items-center gap-1 text-zinc-300 font-medium"
                       title={`Bearing: ${bearingDeg}° (${compassDirection})`}
                     >
                       <Navigation
-                        className="w-3.5 h-3.5 text-cyan-400 transition-transform duration-500"
+                        className="w-3 h-3 text-emerald-400 transition-transform duration-500"
                         style={{
                           transform: `rotate(${bearingDeg}deg)`,
                         }}
@@ -125,11 +121,10 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
                       <span>{compassDirection}</span>
                     </div>
 
-                    <span className="text-slate-600">|</span>
+                    <span className="text-zinc-600">·</span>
 
-                    {/* Geodesic Distance */}
-                    <span className="text-slate-300 font-semibold">
-                      {distanceKm.toLocaleString()} KM
+                    <span className="text-zinc-300 font-semibold">
+                      {distanceKm.toLocaleString()} km
                     </span>
                   </div>
                 )}
