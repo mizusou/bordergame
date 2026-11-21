@@ -29,8 +29,8 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       {/* Top Header Strip: [ FIGURE A.1 ] on left, region/coords on right */}
       <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-2 text-xs sm:text-sm font-bold uppercase">
         <span className="tracking-wider">[ FIGURE A.1 ]</span>
-        <span className="text-zinc-600 dark:text-zinc-400">
-          {formatCoordinates(border.midpoint)}
+        <span className="text-zinc-600 dark:text-zinc-400 font-mono tracking-wider">
+          {isGameOver ? formatCoordinates(border.midpoint) : '??°??\'?  ??°??\'?'}
         </span>
       </div>
 

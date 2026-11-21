@@ -57,14 +57,14 @@ export const HintBar: React.FC<HintBarProps> = ({
       title: 'Length',
       icon: Ruler,
       unlocked: wrongGuessesCount >= 1 || isGameOver,
-      content: `${border.lengthKm.toLocaleString()} km`,
+      content: `${Math.round(border.lengthKm).toLocaleString()} km`,
       lockedLabel: '1 wrong guess',
     },
     {
       title: 'Context',
       icon: GitFork,
       unlocked: wrongGuessesCount >= 2 || isGameOver,
-      content: `${border.contextStubs.length} stubs visible`,
+      content: `${border.contextStubs.length} stubs active`,
       lockedLabel: '2 wrong guesses',
     },
     {
@@ -90,7 +90,8 @@ export const HintBar: React.FC<HintBarProps> = ({
         <span className="text-zinc-500">[ REVEALS PROGRESSIVELY ]</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 pt-1">
+      {/* 2x2 Clean Grid: Generous width per card to eliminate clipping */}
+      <div className="grid grid-cols-2 gap-2 sm:gap-2.5 pt-1">
         {hints.map((hint, idx) => {
           return (
             <div
@@ -101,7 +102,7 @@ export const HintBar: React.FC<HintBarProps> = ({
                   : 'border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-950/40 text-zinc-400 dark:text-zinc-600'
               }`}
             >
-              <div className="flex items-center justify-between uppercase font-bold text-[10px] sm:text-xs">
+              <div className="flex items-center justify-between uppercase font-bold text-[10px] sm:text-xs text-zinc-500 dark:text-zinc-400">
                 <span>0{idx + 1} / {hint.title}</span>
                 {!hint.unlocked && <Lock className="w-3 h-3 shrink-0" />}
               </div>
@@ -110,7 +111,7 @@ export const HintBar: React.FC<HintBarProps> = ({
                 {hint.unlocked ? (
                   <span className="text-black dark:text-zinc-100 font-bold break-words">{hint.content}</span>
                 ) : (
-                  <span className="text-zinc-400 dark:text-zinc-600 font-normal text-[10px] sm:text-xs">[ LOCKED ]</span>
+                  <span className="text-zinc-400 dark:text-zinc-600 font-normal text-[10px] sm:text-xs">[ {hint.lockedLabel} ]</span>
                 )}
               </div>
             </div>
