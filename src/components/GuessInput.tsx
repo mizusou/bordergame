@@ -201,10 +201,10 @@ export const GuessInput: React.FC<GuessInputProps> = ({
         </div>
 
         {/* Dual Input Row */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-2.5">
           {/* Country 1 Input */}
           <div className="relative">
-            <div className="flex items-center justify-between border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-black dark:text-zinc-100 transition-colors focus-within:border-[#d92626] dark:focus-within:border-white sharp-box">
+            <div className="flex items-center justify-between border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3.5 py-2.5 sm:py-3 text-sm text-black dark:text-zinc-100 transition-colors focus-within:border-[#d92626] dark:focus-within:border-white sharp-box">
               <input
                 ref={input1Ref}
                 type="text"
@@ -224,14 +224,14 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 1)}
                 placeholder="Country 1..."
-                className="w-full bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-bold font-mono text-xs uppercase"
+                className="w-full bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-bold font-mono text-xs sm:text-sm uppercase"
               />
               {lockedCountry ? (
-                <span className="text-[10px] bg-emerald-600 text-white font-bold px-1.5 py-0.5 border border-black uppercase shrink-0">
+                <span className="text-[10px] sm:text-xs bg-emerald-600 text-white font-bold px-2 py-0.5 border border-black uppercase shrink-0">
                   LOCKED
                 </span>
               ) : (
-                <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">
+                <span className="text-zinc-400 dark:text-zinc-600 text-xs sm:text-sm shrink-0 select-none">
                   ▾
                 </span>
               )}
@@ -240,7 +240,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
 
           {/* Country 2 Input */}
           <div className="relative">
-            <div className="flex items-center justify-between border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3 py-2 text-sm text-black dark:text-zinc-100 transition-colors focus-within:border-[#d92626] dark:focus-within:border-white sharp-box">
+            <div className="flex items-center justify-between border-2 border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 px-3.5 py-2.5 sm:py-3 text-sm text-black dark:text-zinc-100 transition-colors focus-within:border-[#d92626] dark:focus-within:border-white sharp-box">
               <input
                 ref={input2Ref}
                 type="text"
@@ -258,9 +258,9 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 }}
                 onKeyDown={(e) => handleKeyDown(e, 2)}
                 placeholder={country1 ? 'Neighboring country 2...' : 'Country 2...'}
-                className="w-full bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-bold font-mono text-xs uppercase"
+                className="w-full bg-transparent focus:outline-none placeholder:text-zinc-400 dark:placeholder:text-zinc-600 font-bold font-mono text-xs sm:text-sm uppercase"
               />
-              <span className="text-zinc-400 dark:text-zinc-600 text-xs shrink-0 select-none">
+              <span className="text-zinc-400 dark:text-zinc-600 text-xs sm:text-sm shrink-0 select-none">
                 ▾
               </span>
             </div>
@@ -271,7 +271,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
         <button
           type="submit"
           disabled={disabled || !country1.trim() || !country2.trim()}
-          className="w-full py-2.5 border-2 border-black dark:border-white bg-black hover:bg-zinc-800 disabled:bg-zinc-300 dark:bg-white dark:hover:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-500 dark:text-black dark:disabled:text-zinc-600 font-mono font-black text-xs tracking-widest uppercase transition-colors cursor-pointer disabled:cursor-not-allowed sharp-box flex items-center justify-center gap-2"
+          className="w-full py-3 sm:py-3.5 border-2 border-black dark:border-white bg-black hover:bg-zinc-800 disabled:bg-zinc-300 dark:bg-white dark:hover:bg-zinc-200 dark:disabled:bg-zinc-800 text-white disabled:text-zinc-500 dark:text-black dark:disabled:text-zinc-600 font-mono font-black text-xs sm:text-sm tracking-widest uppercase transition-colors cursor-pointer disabled:cursor-not-allowed sharp-box flex items-center justify-center gap-2"
         >
           <span>SUBMIT ENTRY →</span>
         </button>

@@ -14,9 +14,9 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
   const slots = Array.from({ length: maxGuesses }, (_, i) => guesses[i] || null);
 
   return (
-    <div className="w-full flex flex-col gap-2 font-mono text-xs">
+    <div className="w-full flex flex-col gap-2 font-mono text-xs sm:text-sm">
       {/* Section Header (Matching reference sheet) */}
-      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] text-black dark:text-zinc-300">
+      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] sm:text-xs text-black dark:text-zinc-300">
         <span>PREVIOUS RECORDINGS</span>
         <span className="text-zinc-500">
           {guesses.length} / {maxGuesses} SLOTS
@@ -29,13 +29,13 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
             return (
               <div
                 key={`empty-${index}`}
-                className="px-3 py-2 border-2 border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/40 flex items-center justify-between text-zinc-400 dark:text-zinc-600 select-none sharp-box"
+                className="px-3 sm:px-4 py-2 sm:py-2.5 border-2 border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-zinc-900/40 flex items-center justify-between text-zinc-400 dark:text-zinc-600 select-none sharp-box"
               >
-                <div className="flex items-center gap-2">
-                  <span className="font-bold">0{index + 1} /</span>
-                  <span className="tracking-widest">-----------------------------</span>
+                <div className="flex items-center gap-3 flex-1 mr-4">
+                  <span className="font-bold shrink-0">0{index + 1} /</span>
+                  <div className="flex-1 border-b border-dashed border-zinc-300 dark:border-zinc-700"></div>
                 </div>
-                <span className="text-[10px] uppercase font-bold">[ PENDING ]</span>
+                <span className="text-[10px] sm:text-xs uppercase font-bold shrink-0">[ PENDING ]</span>
               </div>
             );
           }
@@ -61,19 +61,19 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
           return (
             <div
               key={`guess-${index}`}
-              className={`px-3 py-2 border-2 flex items-center justify-between gap-2 transition-all sharp-box animate-fade-in ${
+              className={`px-3 sm:px-4 py-2 sm:py-2.5 border-2 flex items-center justify-between gap-3 transition-all sharp-box animate-fade-in ${
                 isCorrect
                   ? 'border-emerald-600 bg-emerald-600 text-white font-bold'
                   : 'border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 text-black dark:text-zinc-100'
               }`}
             >
               {/* Left: Slot number & Country Names */}
-              <div className="flex items-center gap-2 overflow-hidden text-ellipsis whitespace-nowrap">
+              <div className="flex items-center gap-2.5 overflow-hidden text-ellipsis whitespace-nowrap min-w-0">
                 <span className={`font-bold shrink-0 ${isCorrect ? 'text-white' : 'text-[#d92626] dark:text-[#f87171]'}`}>
                   0{index + 1} /
                 </span>
 
-                <div className="flex items-center gap-1.5 uppercase font-bold text-xs truncate">
+                <div className="flex items-center gap-2 uppercase font-bold text-xs sm:text-sm truncate">
                   <span
                     className={
                       !isCorrect && isC1Half
@@ -97,14 +97,14 @@ export const GuessHistory: React.FC<GuessHistoryProps> = ({
               </div>
 
               {/* Right: Distance & Direction in brackets matching reference */}
-              <div className="flex items-center gap-3 shrink-0 font-mono text-xs">
+              <div className="flex items-center gap-3 shrink-0 font-mono text-xs sm:text-sm">
                 {isCorrect ? (
-                  <div className="flex items-center gap-1 uppercase font-bold text-white">
-                    <Check className="w-3.5 h-3.5 stroke-[3]" />
+                  <div className="flex items-center gap-1.5 uppercase font-bold text-white">
+                    <Check className="w-4 h-4 stroke-[3]" />
                     <span>[ SOLVED ]</span>
                   </div>
                 ) : (
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2.5">
                     <span className="font-bold">
                       {distanceKm.toLocaleString()} km
                     </span>

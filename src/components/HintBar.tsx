@@ -84,33 +84,33 @@ export const HintBar: React.FC<HintBarProps> = ({
   ];
 
   return (
-    <div className="w-full flex flex-col gap-2 font-mono text-xs">
-      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] text-black dark:text-zinc-300">
+    <div className="w-full flex flex-col gap-2 font-mono text-xs sm:text-sm">
+      <div className="flex items-center justify-between border-b-2 border-black dark:border-zinc-400 pb-1 font-bold uppercase tracking-wider text-[11px] sm:text-xs text-black dark:text-zinc-300">
         <span>EXHIBITION DOSSIER // CARTOGRAPHIC NOTES</span>
         <span className="text-zinc-500">[ REVEALS PROGRESSIVELY ]</span>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-1">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-2.5 pt-1">
         {hints.map((hint, idx) => {
           return (
             <div
               key={hint.title}
-              className={`p-2.5 border-2 flex flex-col justify-between gap-1 transition-all sharp-box ${
+              className={`p-2.5 sm:p-3 border-2 flex flex-col justify-between gap-1.5 transition-all sharp-box ${
                 hint.unlocked
                   ? 'border-black dark:border-zinc-400 bg-white dark:bg-zinc-900 text-black dark:text-zinc-100'
                   : 'border-zinc-200 dark:border-zinc-800 bg-white/40 dark:bg-zinc-950/40 text-zinc-400 dark:text-zinc-600'
               }`}
             >
-              <div className="flex items-center justify-between uppercase font-bold text-[10px]">
+              <div className="flex items-center justify-between uppercase font-bold text-[10px] sm:text-xs">
                 <span>0{idx + 1} / {hint.title}</span>
                 {!hint.unlocked && <Lock className="w-3 h-3 shrink-0" />}
               </div>
 
-              <div className="text-xs font-bold leading-tight uppercase truncate">
+              <div className="text-xs sm:text-sm font-bold leading-snug uppercase">
                 {hint.unlocked ? (
-                  <span className="text-black dark:text-zinc-100 font-bold">{hint.content}</span>
+                  <span className="text-black dark:text-zinc-100 font-bold break-words">{hint.content}</span>
                 ) : (
-                  <span className="text-zinc-400 dark:text-zinc-600 font-normal text-[10px]">[ LOCKED ]</span>
+                  <span className="text-zinc-400 dark:text-zinc-600 font-normal text-[10px] sm:text-xs">[ LOCKED ]</span>
                 )}
               </div>
             </div>
