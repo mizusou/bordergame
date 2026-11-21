@@ -243,6 +243,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 
     // 5. Country Side Labels (Only show during active gameplay when a country is half-matched/locked; hide during game-over reveal since the real basemap already displays official country typography)
     const bounds = mainLine.getBounds();
+    let updateLabels: (() => void) | null = null;
 
     if (!isGameOver) {
       const showA =
@@ -253,26 +254,104 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         lockedCountry === border.countryB.name ||
         guessedCountries.includes(border.countryB.name);
 
-      if (showA && border.sideAAnchor) {
-        const borderPt = getClosestPointOnGeometry(border.geometry, border.sideAAnchor);
+      // Helper to dynamically calculate screen-space anchor position
+      // Guarantees labels never overlap the border when zooming out and stay on the correct side
+      const computeDynamicAnchor = (
+        sideAnchor: [number, number],
+        defaultBorderPt: [number, number]
+      ): { borderLatLng: [number, number]; labelLatLng: [number, number] } => {
+        const size = map.getSize();
+        const screenCenter = L.point(size.x / 2, size.y / 2);
 
-        // 5a. Leader Line from border to country label
-        const leaderA = L.polyline(
-          [
-            [borderPt[1], borderPt[0]],
-            [border.sideAAnchor[1], border.sideAAnchor[0]],
-          ],
-          {
-            color: '#10b981',
-            weight: 1.5,
-            dashArray: '3, 4',
-            opacity: 0.85,
+        // Find visible vertex on border closest to screen center
+        let bestBorderPt: [number, number] = defaultBorderPt;
+        let minCenterDist = Infinity;
+
+        const checkPt = (coord: [number, number]) => {
+          const ptScreen = map.latLngToContainerPoint([coord[1], coord[0]]);
+          if (
+            ptScreen.x >= 30 &&
+            ptScreen.x <= size.x - 30 &&
+            ptScreen.y >= 30 &&
+            ptScreen.y <= size.y - 30
+          ) {
+            const d = ptScreen.distanceTo(screenCenter);
+            if (d < minCenterDist) {
+              minCenterDist = d;
+              bestBorderPt = coord;
+            }
           }
-        );
+        };
+
+        if (border.geometry.type === 'LineString') {
+          const coords = border.geometry.coordinates as Array<[number, number]>;
+          for (const c of coords) checkPt(c);
+        } else if (border.geometry.type === 'MultiLineString') {
+          const lines = border.geometry.coordinates as Array<Array<[number, number]>>;
+          for (const line of lines) {
+            for (const c of line) checkPt(c);
+          }
+        }
+
+        const borderScreen = map.latLngToContainerPoint([bestBorderPt[1], bestBorderPt[0]]);
+        const anchorScreen = map.latLngToContainerPoint([sideAnchor[1], sideAnchor[0]]);
+
+        const dx = anchorScreen.x - borderScreen.x;
+        const dy = anchorScreen.y - borderScreen.y;
+        const len = Math.hypot(dx, dy);
+
+        let ux = 1;
+        let uy = 0;
+        if (len > 0.001) {
+          ux = dx / len;
+          uy = dy / len;
+        }
+
+        // Elliptical clearance calculation for ~90px x 28px pill
+        const badgeRadius = Math.hypot(ux * 45, uy * 15);
+        const minClearancePx = 28; // guaranteed visual air gap
+        const minOffsetPx = badgeRadius + minClearancePx; // ~55px to 75px minimum screen distance
+
+        // Offset never drops below minOffsetPx, preventing collision at any zoom level
+        const targetOffsetPx = Math.max(minOffsetPx, Math.min(len, 120));
+
+        const labelScreenX = borderScreen.x + ux * targetOffsetPx;
+        const labelScreenY = borderScreen.y + uy * targetOffsetPx;
+
+        const labelLatLng = map.containerPointToLatLng(L.point(labelScreenX, labelScreenY));
+
+        return {
+          borderLatLng: [bestBorderPt[1], bestBorderPt[0]],
+          labelLatLng: [labelLatLng.lat, labelLatLng.lng],
+        };
+      };
+
+      let elementsA: {
+        leader: L.Polyline;
+        dot: L.CircleMarker;
+        marker: L.Marker;
+        defaultBorderPt: [number, number];
+      } | null = null;
+
+      let elementsB: {
+        leader: L.Polyline;
+        dot: L.CircleMarker;
+        marker: L.Marker;
+        defaultBorderPt: [number, number];
+      } | null = null;
+
+      if (showA && border.sideAAnchor) {
+        const defaultBorderPt = getClosestPointOnGeometry(border.geometry, border.sideAAnchor);
+
+        const leaderA = L.polyline([], {
+          color: '#10b981',
+          weight: 1.5,
+          dashArray: '3, 4',
+          opacity: 0.85,
+        });
         vectorGroup.addLayer(leaderA);
 
-        // 5b. Anchor Dot on border
-        const anchorDotA = L.circleMarker([borderPt[1], borderPt[0]], {
+        const anchorDotA = L.circleMarker([defaultBorderPt[1], defaultBorderPt[0]], {
           radius: 3,
           fillColor: '#10b981',
           color: '#ffffff',
@@ -281,7 +360,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         });
         vectorGroup.addLayer(anchorDotA);
 
-        // 5c. Country Label Badge
         const iconA = L.divIcon({
           className: 'custom-map-label',
           html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryA.name}</span></div>`,
@@ -290,29 +368,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
         vectorGroup.addLayer(markerA);
 
-        bounds.extend([border.sideAAnchor[1], border.sideAAnchor[0]]);
+        elementsA = { leader: leaderA, dot: anchorDotA, marker: markerA, defaultBorderPt };
       }
 
       if (showB && border.sideBAnchor) {
-        const borderPt = getClosestPointOnGeometry(border.geometry, border.sideBAnchor);
+        const defaultBorderPt = getClosestPointOnGeometry(border.geometry, border.sideBAnchor);
 
-        // 5a. Leader Line from border to country label
-        const leaderB = L.polyline(
-          [
-            [borderPt[1], borderPt[0]],
-            [border.sideBAnchor[1], border.sideBAnchor[0]],
-          ],
-          {
-            color: '#10b981',
-            weight: 1.5,
-            dashArray: '3, 4',
-            opacity: 0.85,
-          }
-        );
+        const leaderB = L.polyline([], {
+          color: '#10b981',
+          weight: 1.5,
+          dashArray: '3, 4',
+          opacity: 0.85,
+        });
         vectorGroup.addLayer(leaderB);
 
-        // 5b. Anchor Dot on border
-        const anchorDotB = L.circleMarker([borderPt[1], borderPt[0]], {
+        const anchorDotB = L.circleMarker([defaultBorderPt[1], defaultBorderPt[0]], {
           radius: 3,
           fillColor: '#10b981',
           color: '#ffffff',
@@ -321,7 +391,6 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         });
         vectorGroup.addLayer(anchorDotB);
 
-        // 5c. Country Label Badge
         const iconB = L.divIcon({
           className: 'custom-map-label',
           html: `<div class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400 whitespace-nowrap w-max transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm shrink-0"></span><span class="leading-none">${border.countryB.name}</span></div>`,
@@ -330,7 +399,27 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
         vectorGroup.addLayer(markerB);
 
-        bounds.extend([border.sideBAnchor[1], border.sideBAnchor[0]]);
+        elementsB = { leader: leaderB, dot: anchorDotB, marker: markerB, defaultBorderPt };
+      }
+
+      if (elementsA || elementsB) {
+        updateLabels = () => {
+          if (elementsA && border.sideAAnchor) {
+            const posA = computeDynamicAnchor(border.sideAAnchor, elementsA.defaultBorderPt);
+            elementsA.marker.setLatLng(posA.labelLatLng);
+            elementsA.leader.setLatLngs([posA.borderLatLng, posA.labelLatLng]);
+            elementsA.dot.setLatLng(posA.borderLatLng);
+          }
+          if (elementsB && border.sideBAnchor) {
+            const posB = computeDynamicAnchor(border.sideBAnchor, elementsB.defaultBorderPt);
+            elementsB.marker.setLatLng(posB.labelLatLng);
+            elementsB.leader.setLatLngs([posB.borderLatLng, posB.labelLatLng]);
+            elementsB.dot.setLatLng(posB.borderLatLng);
+          }
+        };
+
+        map.on('move zoom viewreset resize', updateLabels);
+        updateLabels();
       }
     }
 
@@ -342,6 +431,12 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         map.fitBounds(bounds, { padding: [50, 50], animate: false });
       }
     }
+
+    return () => {
+      if (updateLabels) {
+        map.off('move zoom viewreset resize', updateLabels);
+      }
+    };
   }, [border, unlockedHints, lockedCountry, guessedCountries, isGameOver, isWon]);
 
   // Controls
