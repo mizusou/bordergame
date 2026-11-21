@@ -4,6 +4,7 @@ import { LeafletMap } from './LeafletMap.tsx';
 import { formatCoordinates } from '../utils/geo.ts';
 
 interface MapCanvasProps {
+  mode?: 'daily' | 'practice';
   border: BorderItem;
   unlockedHints: number;
   lockedCountry: string | null;
@@ -13,6 +14,7 @@ interface MapCanvasProps {
 }
 
 export const MapCanvas: React.FC<MapCanvasProps> = ({
+  mode = 'daily',
   border,
   unlockedHints,
   lockedCountry,
@@ -24,6 +26,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
     <div className="relative isolate w-full h-[380px] sm:h-[440px] md:h-[480px] bg-[#0c0d12] rounded-3xl border border-zinc-800/80 overflow-hidden shadow-2xl transition-all">
       {/* Real Map (Leaflet) */}
       <LeafletMap
+        key={`${mode}-${border.id}`}
         border={border}
         unlockedHints={unlockedHints}
         lockedCountry={lockedCountry}

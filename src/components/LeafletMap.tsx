@@ -3,6 +3,7 @@ import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import { BorderItem } from '../types/game.ts';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
+import { getClosestPointOnGeometry } from '../utils/geo.ts';
 
 interface LeafletMapProps {
   border: BorderItem;
@@ -36,6 +37,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
+    // Calculate initial bounds from border geometry
+    const tempLayer = L.geoJSON(border.geometry as any);
+    const initialBounds = tempLayer.getBounds();
+
     const [lon, lat] = border.midpoint;
 
     const map = L.map(containerRef.current, {
@@ -46,6 +51,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       minZoom: 2,
       maxZoom: 18,
     });
+
+    if (initialBounds.isValid()) {
+      map.fitBounds(initialBounds, { padding: [50, 50], animate: false });
+    }
 
     // Custom dark grid canvas layer for guessing mode
     const DarkGridLayer = L.GridLayer.extend({
@@ -91,13 +100,16 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const map = mapRef.current;
     if (!map) return;
 
-    // Remove existing tile layer if any
-    if (tileLayerRef.current) {
-      map.removeLayer(tileLayerRef.current);
-      tileLayerRef.current = null;
-    }
-
     if (isGameOver) {
+      if (gridLayerRef.current && map.hasLayer(gridLayerRef.current)) {
+        map.removeLayer(gridLayerRef.current);
+      }
+
+      if (tileLayerRef.current) {
+        map.removeLayer(tileLayerRef.current);
+        tileLayerRef.current = null;
+      }
+
       if (mapStyle === 'satellite') {
         const satLayer = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}',
@@ -118,11 +130,18 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         group.addTo(map);
         tileLayerRef.current = group as any;
       }
-
-      if (gridLayerRef.current && map.hasLayer(gridLayerRef.current)) {
-        map.removeLayer(gridLayerRef.current);
-      }
     } else {
+      // In active guessing mode: PURGE any real map tiles immediately
+      if (tileLayerRef.current) {
+        map.removeLayer(tileLayerRef.current);
+        tileLayerRef.current = null;
+      }
+      map.eachLayer((layer) => {
+        if (layer instanceof L.TileLayer) {
+          map.removeLayer(layer);
+        }
+      });
+
       // Ensure dark grid is active during guessing
       if (gridLayerRef.current && !map.hasLayer(gridLayerRef.current)) {
         gridLayerRef.current.addTo(map);
@@ -223,6 +242,8 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     }
 
     // 5. Country Side Labels (Only show during active gameplay when a country is half-matched/locked; hide during game-over reveal since the real basemap already displays official country typography)
+    const bounds = mainLine.getBounds();
+
     if (!isGameOver) {
       const showA =
         lockedCountry === border.countryA.name ||
@@ -233,33 +254,92 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         guessedCountries.includes(border.countryB.name);
 
       if (showA && border.sideAAnchor) {
+        const borderPt = getClosestPointOnGeometry(border.geometry, border.sideAAnchor);
+
+        // 5a. Leader Line from border to country label
+        const leaderA = L.polyline(
+          [
+            [borderPt[1], borderPt[0]],
+            [border.sideAAnchor[1], border.sideAAnchor[0]],
+          ],
+          {
+            color: '#10b981',
+            weight: 1.5,
+            dashArray: '3, 4',
+            opacity: 0.85,
+          }
+        );
+        vectorGroup.addLayer(leaderA);
+
+        // 5b. Anchor Dot on border
+        const anchorDotA = L.circleMarker([borderPt[1], borderPt[0]], {
+          radius: 3,
+          fillColor: '#10b981',
+          color: '#ffffff',
+          weight: 1.5,
+          fillOpacity: 1,
+        });
+        vectorGroup.addLayer(anchorDotA);
+
+        // 5c. Country Label Badge
         const iconA = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryA.name}</div>`,
+          html: `<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/95 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400/90 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm inline-block"></span><span>${border.countryA.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
         vectorGroup.addLayer(markerA);
+
+        bounds.extend([border.sideAAnchor[1], border.sideAAnchor[0]]);
       }
 
       if (showB && border.sideBAnchor) {
+        const borderPt = getClosestPointOnGeometry(border.geometry, border.sideBAnchor);
+
+        // 5a. Leader Line from border to country label
+        const leaderB = L.polyline(
+          [
+            [borderPt[1], borderPt[0]],
+            [border.sideBAnchor[1], border.sideBAnchor[0]],
+          ],
+          {
+            color: '#10b981',
+            weight: 1.5,
+            dashArray: '3, 4',
+            opacity: 0.85,
+          }
+        );
+        vectorGroup.addLayer(leaderB);
+
+        // 5b. Anchor Dot on border
+        const anchorDotB = L.circleMarker([borderPt[1], borderPt[0]], {
+          radius: 3,
+          fillColor: '#10b981',
+          color: '#ffffff',
+          weight: 1.5,
+          fillOpacity: 1,
+        });
+        vectorGroup.addLayer(anchorDotB);
+
+        // 5c. Country Label Badge
         const iconB = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="px-3 py-1 rounded-lg bg-emerald-600 text-white font-sans font-bold text-xs shadow-xl border border-emerald-400 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2">${border.countryB.name}</div>`,
+          html: `<div class="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-600/95 text-white font-sans font-bold text-xs shadow-2xl border border-emerald-400/90 whitespace-nowrap transform -translate-x-1/2 -translate-y-1/2 backdrop-blur-md pointer-events-none"><span class="w-1.5 h-1.5 rounded-full bg-white shadow-sm inline-block"></span><span>${border.countryB.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
         vectorGroup.addLayer(markerB);
+
+        bounds.extend([border.sideBAnchor[1], border.sideBAnchor[0]]);
       }
     }
 
-    // Fit view
-    const bounds = mainLine.getBounds();
+    // Fit view (animate smoothly ONLY on reveal, jump instantly without zooming in guessing mode)
     if (bounds.isValid()) {
       if (isGameOver) {
         map.flyToBounds(bounds.pad(1.2), { duration: 1.4 });
       } else {
-        map.fitBounds(bounds, { padding: [50, 50], animate: true });
+        map.fitBounds(bounds, { padding: [50, 50], animate: false });
       }
     }
   }, [border, unlockedHints, lockedCountry, guessedCountries, isGameOver, isWon]);
@@ -270,8 +350,11 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
   const handleReset = () => {
     const map = mapRef.current;
     if (!map) return;
-    const [lon, lat] = border.midpoint;
-    map.flyTo([lat, lon], 6, { duration: 0.8 });
+    const tempLayer = L.geoJSON(border.geometry as any);
+    const bounds = tempLayer.getBounds();
+    if (bounds.isValid()) {
+      map.fitBounds(bounds, { padding: [50, 50], animate: true });
+    }
   };
 
   return (

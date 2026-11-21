@@ -11,7 +11,7 @@ import re
 import requests
 from collections import defaultdict
 from shapely.geometry import shape, mapping, Point, LineString, MultiLineString, Polygon, MultiPolygon
-from shapely.ops import linemerge, unary_union
+from shapely.ops import linemerge, unary_union, nearest_points
 
 CACHE_DIR = "data_cache"
 BOUNDARIES_URL = "https://raw.githubusercontent.com/nvkelso/natural-earth-vector/master/geojson/ne_10m_admin_0_boundary_lines_land.geojson"
@@ -285,48 +285,38 @@ def main():
             if not any(haversine_km(ep['coordinates'][0], ep['coordinates'][1], dep['coordinates'][0], dep['coordinates'][1]) < 2.0 for dep in deduped_endpoints):
                 deduped_endpoints.append(ep)
 
-        # Side Anchors
+        # Side Anchors (Interior points comfortably offset from the border line)
         poly1 = c1['geom']
         poly2 = c2['geom']
 
         mx, my = midpoint[0], midpoint[1]
         pt_m = Point(mx, my)
-        mid_proj_dist = primary_line.project(pt_m, normalized=True)
-        pt_before = primary_line.interpolate(max(0.0, mid_proj_dist - 0.04), normalized=True)
-        pt_after = primary_line.interpolate(min(1.0, mid_proj_dist + 0.04), normalized=True)
 
+        minx, miny, maxx, maxy = simplified_geom.bounds
         cos_lat = max(0.15, math.cos(math.radians(my)))
-        dx = (pt_after.x - pt_before.x) * cos_lat
-        dy = (pt_after.y - pt_before.y)
-        t_len = math.hypot(dx, dy)
-        ux, uy = (1.0, 0.0) if t_len == 0 else (dx / t_len, dy / t_len)
-        nx, ny = -uy, ux
+        dim = max(maxy - miny, (maxx - minx) * cos_lat)
+        target_offset_deg = max(0.25, min(0.65, dim * 0.15))
 
         sideA_anchor = None
-        sideB_anchor = None
-
-        for offset_km in [25, 15, 40, 60, 90, 120, 160]:
-            d_deg = offset_km / 111.0
-            p_pos = Point(mx + (nx * d_deg) / cos_lat, my + ny * d_deg)
-            p_neg = Point(mx - (nx * d_deg) / cos_lat, my - ny * d_deg)
-
-            in1_pos = poly1.intersects(p_pos)
-            in2_pos = poly2.intersects(p_pos)
-            in1_neg = poly1.intersects(p_neg)
-            in2_neg = poly2.intersects(p_neg)
-
-            if in1_pos and in2_neg:
-                sideA_anchor = [round(p_pos.x, 4), round(p_pos.y, 4)]
-                sideB_anchor = [round(p_neg.x, 4), round(p_neg.y, 4)]
+        for factor in [1.0, 0.75, 0.5, 0.25]:
+            buf = simplified_geom.buffer(target_offset_deg * factor)
+            diff1 = poly1.difference(buf)
+            if not diff1.is_empty:
+                p1, _ = nearest_points(diff1, pt_m)
+                sideA_anchor = [round(p1.x, 4), round(p1.y, 4)]
                 break
-            elif in1_neg and in2_pos:
-                sideA_anchor = [round(p_neg.x, 4), round(p_neg.y, 4)]
-                sideB_anchor = [round(p_pos.x, 4), round(p_pos.y, 4)]
-                break
-
         if not sideA_anchor:
             rep = poly1.representative_point()
             sideA_anchor = [round(rep.x, 4), round(rep.y, 4)]
+
+        sideB_anchor = None
+        for factor in [1.0, 0.75, 0.5, 0.25]:
+            buf = simplified_geom.buffer(target_offset_deg * factor)
+            diff2 = poly2.difference(buf)
+            if not diff2.is_empty:
+                p2, _ = nearest_points(diff2, pt_m)
+                sideB_anchor = [round(p2.x, 4), round(p2.y, 4)]
+                break
         if not sideB_anchor:
             rep = poly2.representative_point()
             sideB_anchor = [round(rep.x, 4), round(rep.y, 4)]

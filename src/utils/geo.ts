@@ -151,3 +151,57 @@ export function calculateScaleBar(
 
   return { km: bestKm, pixelWidth: Math.round(bestWidth) };
 }
+
+/**
+ * Finds the closest point [lon, lat] on a GeoJSON LineString or MultiLineString to a target [lon, lat]
+ */
+export function getClosestPointOnGeometry(
+  geom: { type: string; coordinates: any },
+  target: [number, number]
+): [number, number] {
+  const [targetLon, targetLat] = target;
+  let closest: [number, number] = target;
+  let minDistance = Infinity;
+
+  const checkSegment = (p1: [number, number], p2: [number, number]) => {
+    const [x1, y1] = p1;
+    const [x2, y2] = p2;
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    const lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) {
+      const d = (targetLon - x1) ** 2 + (targetLat - y1) ** 2;
+      if (d < minDistance) {
+        minDistance = d;
+        closest = p1;
+      }
+      return;
+    }
+
+    let t = ((targetLon - x1) * dx + (targetLat - y1) * dy) / lenSq;
+    t = Math.max(0, Math.min(1, t));
+    const projLon = x1 + t * dx;
+    const projLat = y1 + t * dy;
+    const d = (targetLon - projLon) ** 2 + (targetLat - projLat) ** 2;
+    if (d < minDistance) {
+      minDistance = d;
+      closest = [projLon, projLat];
+    }
+  };
+
+  if (geom.type === 'LineString') {
+    const coords = geom.coordinates as Array<[number, number]>;
+    for (let i = 0; i < coords.length - 1; i++) {
+      checkSegment(coords[i], coords[i + 1]);
+    }
+  } else if (geom.type === 'MultiLineString') {
+    const lines = geom.coordinates as Array<Array<[number, number]>>;
+    for (const line of lines) {
+      for (let i = 0; i < line.length - 1; i++) {
+        checkSegment(line[i], line[i + 1]);
+      }
+    }
+  }
+
+  return closest;
+}

@@ -267,6 +267,7 @@ export default function App() {
 
         {/* Map Canvas */}
         <MapCanvas
+          mode={mode}
           border={currentBorder}
           unlockedHints={wrongGuessesCount}
           lockedCountry={currentLockedCountry}
