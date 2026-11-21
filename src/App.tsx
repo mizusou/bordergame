@@ -295,7 +295,7 @@ export default function App() {
         {/* Exhibition Two-Column Work Grid (FIGURE A.1 on left, HYPOTHESIS SUBMISSION on right) */}
         <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 gap-5 xl:gap-8 items-stretch my-1 sm:my-2">
           {/* Left Column: [ FIGURE A.1 ] Map & Segmented Legend */}
-          <div className="w-full lg:col-span-7 flex flex-col justify-between h-full">
+          <div className="w-full lg:col-span-7 flex flex-col h-full">
             <MapCanvas
               theme={theme}
               mode={mode}
