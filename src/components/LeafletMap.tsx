@@ -4,6 +4,8 @@ import 'leaflet/dist/leaflet.css';
 import { BorderItem } from '../types/game.ts';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { getClosestPointOnGeometry } from '../utils/geo.ts';
+import worldRevealData from '../data/world_reveal.json';
+import { getLandNeighbors } from '../utils/neighbors.ts';
 
 interface LeafletMapProps {
   theme: 'light' | 'dark';
@@ -156,9 +158,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}',
           { maxZoom: 16 }
         );
+        // Reduced opacity to drastically suppress county sub-borders and small city labels
         const lightLabels = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
-          { maxZoom: 16 }
+          { maxZoom: 16, opacity: 0.15 }
         );
         const group = L.layerGroup([lightBase, lightLabels]);
         group.addTo(map);
@@ -168,9 +171,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
           { maxZoom: 16 }
         );
+        // Reduced opacity to drastically suppress county sub-borders and small city labels
         const darkLabels = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}',
-          { maxZoom: 16 }
+          { maxZoom: 16, opacity: 0.15 }
         );
         const group = L.layerGroup([darkBase, darkLabels]);
         group.addTo(map);
@@ -212,6 +216,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     vectorGroup.clearLayers();
 
     const isLight = theme === 'light';
+    const isDark = !isLight;
     const lineColor = isGameOver
       ? isWon
         ? '#16a34a'
@@ -219,6 +224,74 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       : isLight
       ? '#000000'
       : '#ffffff';
+
+    // 0. On Game Over: Draw Bright Sovereign Country Borders & Neighbor Context
+    if (isGameOver) {
+      const countriesLayer = L.geoJSON(worldRevealData as any, {
+        style: (feature) => {
+          const name = feature?.properties?.name;
+          const isTargetA = name === border.countryA.name;
+          const isTargetB = name === border.countryB.name;
+          const isTarget = isTargetA || isTargetB;
+
+          return {
+            color: isTarget
+              ? (isDark ? '#ffffff' : '#000000')
+              : (isDark ? '#e4e4e7' : '#27272a'), // Bright silver-white in dark mode, solid black in light mode
+            weight: isTarget ? 2.5 : 1.75,
+            opacity: isTarget ? 1 : 0.85,
+            fillColor: isTarget
+              ? (isWon ? '#16a34a' : '#d92626')
+              : 'transparent',
+            fillOpacity: isTarget ? 0.08 : 0,
+          };
+        },
+      });
+      vectorGroup.addLayer(countriesLayer);
+
+      // Neighbor country labels for visible context
+      const neighborsA = getLandNeighbors(border.countryA.name);
+      const neighborsB = getLandNeighbors(border.countryB.name);
+      const surroundingSet = new Set([...neighborsA, ...neighborsB]);
+      surroundingSet.delete(border.countryA.name);
+      surroundingSet.delete(border.countryB.name);
+
+      const features = (worldRevealData as any).features || [];
+      for (const neighborName of surroundingSet) {
+        const feat = features.find((f: any) => f.properties?.name === neighborName);
+        if (feat) {
+          let ring: Array<[number, number]> | null = null;
+          if (feat.geometry.type === 'Polygon') {
+            ring = feat.geometry.coordinates[0];
+          } else if (feat.geometry.type === 'MultiPolygon') {
+            let maxCount = 0;
+            for (const poly of feat.geometry.coordinates) {
+              if (poly[0]?.length > maxCount) {
+                maxCount = poly[0].length;
+                ring = poly[0];
+              }
+            }
+          }
+          if (ring && ring.length > 0) {
+            let sx = 0, sy = 0;
+            for (const pt of ring) {
+              sx += pt[0];
+              sy += pt[1];
+            }
+            const centerLon = sx / ring.length;
+            const centerLat = sy / ring.length;
+
+            const nIcon = L.divIcon({
+              className: 'custom-neighbor-label',
+              html: `<div class="px-2 py-0.5 bg-black/85 text-zinc-300 dark:bg-zinc-950/90 dark:text-zinc-200 font-mono font-bold text-[10px] uppercase border border-zinc-500/60 shadow-sm w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">${neighborName}</div>`,
+              iconSize: [0, 0],
+            });
+            const nMarker = L.marker([centerLat, centerLon], { icon: nIcon });
+            vectorGroup.addLayer(nMarker);
+          }
+        }
+      }
+    }
 
     // 1. Outer Glow / Contrast Halo
     if (!isLight || isGameOver) {
@@ -282,18 +355,21 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     }
 
-    // 5. Country Side Labels (Only show during active gameplay when a country is half-matched/locked; hide during game-over reveal since the real basemap already displays official country typography)
+    // 5. Country Side Labels (Always show on game-over reveal so nations are prominently identifiable, or during active gameplay when half-matched)
     const bounds = mainLine.getBounds();
     let updateLabels: (() => void) | null = null;
 
-    if (!isGameOver) {
-      const showA =
-        lockedCountry === border.countryA.name ||
-        guessedCountries.includes(border.countryA.name);
+    const showA =
+      isGameOver ||
+      lockedCountry === border.countryA.name ||
+      guessedCountries.includes(border.countryA.name);
 
-      const showB =
-        lockedCountry === border.countryB.name ||
-        guessedCountries.includes(border.countryB.name);
+    const showB =
+      isGameOver ||
+      lockedCountry === border.countryB.name ||
+      guessedCountries.includes(border.countryB.name);
+
+    if (showA || showB) {
 
       // Helper to dynamically calculate screen-space anchor position
       // Guarantees labels never overlap the border when zooming out and stay on the correct side
@@ -401,9 +477,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         });
         vectorGroup.addLayer(anchorDotA);
 
+        const badgeBgA = isGameOver && !isWon ? 'bg-[#d92626]' : 'bg-emerald-600';
         const iconA = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryA.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 ${badgeBgA} text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryA.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerA = L.marker([border.sideAAnchor[1], border.sideAAnchor[0]], { icon: iconA });
@@ -432,9 +509,10 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         });
         vectorGroup.addLayer(anchorDotB);
 
+        const badgeBgB = isGameOver && !isWon ? 'bg-[#d92626]' : 'bg-emerald-600';
         const iconB = L.divIcon({
           className: 'custom-map-label',
-          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 bg-emerald-600 text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryB.name}</span></div>`,
+          html: `<div class="inline-flex items-center gap-1.5 px-2.5 py-1 ${badgeBgB} text-white font-mono font-bold text-xs uppercase border-2 border-black dark:border-white shadow-none w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none"><span class="w-1.5 h-1.5 bg-white shrink-0"></span><span>${border.countryB.name}</span></div>`,
           iconSize: [0, 0],
         });
         const markerB = L.marker([border.sideBAnchor[1], border.sideBAnchor[0]], { icon: iconB });
