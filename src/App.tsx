@@ -32,7 +32,7 @@ import { StatsModal } from './components/StatsModal.tsx';
 import { HelpModal } from './components/HelpModal.tsx';
 
 export default function App() {
-  const todayStr = useMemo(() => getTodayDateString(), []);
+  const [todayStr, setTodayStr] = useState<string>(() => getTodayDateString());
   const initialDaily = useMemo(() => getDailyBorder(todayStr), [todayStr]);
 
   // Theme: light | dark
@@ -119,6 +119,42 @@ export default function App() {
   useEffect(() => {
     saveDailyState(dailyState);
   }, [dailyState]);
+
+  // Roll over automatically at midnight Eastern Time (America/New_York)
+  useEffect(() => {
+    const checkDateRollover = () => {
+      const current = getTodayDateString();
+      if (current !== todayStr) {
+        setTodayStr(current);
+        const nextDaily = getDailyBorder(current);
+        const saved = loadDailyState(current);
+        if (saved && saved.borderId === nextDaily.border.id) {
+          setDailyState({
+            ...saved,
+            dayNumber: nextDaily.dayNumber,
+          });
+        } else {
+          setDailyState({
+            dateStr: current,
+            dayNumber: nextDaily.dayNumber,
+            borderId: nextDaily.border.id,
+            guesses: [],
+            status: 'playing',
+            lockedCountry: null,
+          });
+        }
+      }
+    };
+
+    const interval = setInterval(checkDateRollover, 1000);
+    window.addEventListener('focus', checkDateRollover);
+    document.addEventListener('visibilitychange', checkDateRollover);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener('focus', checkDateRollover);
+      document.removeEventListener('visibilitychange', checkDateRollover);
+    };
+  }, [todayStr]);
 
   // Trigger celebration confetti
   const triggerWinConfetti = useCallback(() => {
@@ -213,7 +249,7 @@ export default function App() {
         lockedCountry: nextLockedCountry,
       }));
       if (isWon || isLost) {
-        recordGameResult(isWon, nextGuesses.length);
+        recordGameResult(isWon, nextGuesses.length, dailyState.dateStr);
       }
     } else {
       setPracticeGuesses(nextGuesses);
@@ -338,6 +374,7 @@ export default function App() {
               {/* Active State: GuessInput during play, or In-Layout ResultsPanel when finished */}
               {currentStatus === 'playing' ? (
                 <GuessInput
+                  key={`${mode}-${currentBorder.id}`}
                   lockedCountry={currentLockedCountry}
                   onMakeGuess={handleMakeGuess}
                   disabled={false}

@@ -41,8 +41,11 @@ export const HintBar: React.FC<HintBarProps> = ({
     const regA = cleanRegion(border.countryA.region);
     const regB = cleanRegion(border.countryB.region);
 
-    if (regA && regA === regB) {
+    if (regA && regB && regA === regB) {
       return regA;
+    }
+    if (regA && regB && regA !== regB) {
+      return `${regA} / ${regB}`;
     }
     if (border.countryA.continent === border.countryB.continent) {
       return regA || regB || border.countryA.continent;

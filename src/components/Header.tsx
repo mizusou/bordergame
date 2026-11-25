@@ -84,7 +84,7 @@ export const Header: React.FC<HeaderProps> = ({
           </div>
           <div className="font-bold text-[#d92626] dark:text-[#f87171] tracking-wider text-xs sm:text-lg my-0.5">
             {isUnlockedLength || gameStatus !== 'playing'
-              ? `${lengthKm.toFixed(1)} KM LENGTH`
+              ? `${Math.round(lengthKm).toLocaleString()} KM LENGTH`
               : 'CLASSIFIED LENGTH'}
           </div>
           <div className="font-bold tracking-wider uppercase text-[10px] sm:text-sm">
