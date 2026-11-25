@@ -4,21 +4,42 @@ const STATS_KEY = 'borderline_game_stats_v1';
 const DAILY_STATE_KEY = 'borderline_daily_state_v1';
 const HAS_SEEN_TUTORIAL_KEY = 'borderline_tutorial_seen';
 
+const DEFAULT_STATS: GameStats = {
+  gamesPlayed: 0,
+  gamesWon: 0,
+  currentStreak: 0,
+  maxStreak: 0,
+  guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+};
+
 export function loadGameStats(): GameStats {
   try {
     const raw = localStorage.getItem(STATS_KEY);
     if (raw) {
-      return JSON.parse(raw);
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return {
+          gamesPlayed: Number(parsed.gamesPlayed) || 0,
+          gamesWon: Number(parsed.gamesWon) || 0,
+          currentStreak: Number(parsed.currentStreak) || 0,
+          maxStreak: Number(parsed.maxStreak) || 0,
+          guessDistribution: {
+            ...DEFAULT_STATS.guessDistribution,
+            ...(parsed.guessDistribution && typeof parsed.guessDistribution === 'object'
+              ? parsed.guessDistribution
+              : {}),
+          },
+          lastPlayedDate:
+            typeof parsed.lastPlayedDate === 'string' ? parsed.lastPlayedDate : undefined,
+        };
+      }
     }
   } catch (e) {
     console.error('Failed to load stats', e);
   }
   return {
-    gamesPlayed: 0,
-    gamesWon: 0,
-    currentStreak: 0,
-    maxStreak: 0,
-    guessDistribution: { 1: 0, 2: 0, 3: 0, 4: 0, 5: 0, 6: 0 },
+    ...DEFAULT_STATS,
+    guessDistribution: { ...DEFAULT_STATS.guessDistribution },
   };
 }
 
@@ -30,12 +51,32 @@ export function saveGameStats(stats: GameStats): void {
   }
 }
 
-export function recordGameResult(won: boolean, guessCount: number): GameStats {
+function isPreviousCalendarDay(prevDateStr: string | undefined, currDateStr: string): boolean {
+  if (!prevDateStr) return false;
+  const [py, pm, pd] = prevDateStr.split('-').map(Number);
+  const [cy, cm, cd] = currDateStr.split('-').map(Number);
+  if (!py || !pm || !pd || !cy || !cm || !cd) return false;
+  const prevMs = Date.UTC(py, pm - 1, pd);
+  const currMs = Date.UTC(cy, cm - 1, cd);
+  return Math.round((currMs - prevMs) / (1000 * 60 * 60 * 24)) === 1;
+}
+
+export function recordGameResult(
+  won: boolean,
+  guessCount: number,
+  dateStr: string
+): GameStats {
   const stats = loadGameStats();
+  if (stats.lastPlayedDate === dateStr) {
+    return stats;
+  }
+
   stats.gamesPlayed += 1;
   if (won) {
     stats.gamesWon += 1;
-    stats.currentStreak += 1;
+    stats.currentStreak = isPreviousCalendarDay(stats.lastPlayedDate, dateStr)
+      ? stats.currentStreak + 1
+      : 1;
     if (stats.currentStreak > stats.maxStreak) {
       stats.maxStreak = stats.currentStreak;
     }
@@ -43,6 +84,7 @@ export function recordGameResult(won: boolean, guessCount: number): GameStats {
   } else {
     stats.currentStreak = 0;
   }
+  stats.lastPlayedDate = dateStr;
   saveGameStats(stats);
   return stats;
 }
@@ -52,7 +94,7 @@ export function loadDailyState(todayStr: string): DailyGameState | null {
     const raw = localStorage.getItem(DAILY_STATE_KEY);
     if (raw) {
       const parsed: DailyGameState = JSON.parse(raw);
-      if (parsed.dateStr === todayStr) {
+      if (parsed && parsed.dateStr === todayStr && Array.isArray(parsed.guesses)) {
         return parsed;
       }
     }

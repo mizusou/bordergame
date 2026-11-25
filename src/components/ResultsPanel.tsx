@@ -21,29 +21,57 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
   dayNumber,
   onStartPractice,
 }) => {
-  const [copied, setCopied] = useState<boolean>(false);
+  const [copied, setCopied] = useState<'idle' | 'copied' | 'failed'>('idle');
   const [countdown, setCountdown] = useState(getTimeUntilMidnight());
 
   useEffect(() => {
     if (!isDaily) return;
+    setCountdown(getTimeUntilMidnight());
     const interval = setInterval(() => {
       setCountdown(getTimeUntilMidnight());
     }, 1000);
     return () => clearInterval(interval);
-  }, [isDaily]);
+  }, [isDaily, dayNumber]);
 
   const stats = loadGameStats();
+
+  const regionDisplay =
+    border.countryA.region &&
+    border.countryB.region &&
+    border.countryA.region !== border.countryB.region
+      ? `${border.countryA.region} / ${border.countryB.region}`
+      : border.countryA.region || border.countryB.region || border.countryA.continent;
+
+  const continentDisplay =
+    border.countryA.continent !== border.countryB.continent
+      ? `${border.countryA.continent} / ${border.countryB.continent}`
+      : border.countryA.continent;
 
   const handleShare = async () => {
     const text = generateShareText(dayNumber, guesses, isWon);
     try {
-      if (navigator.clipboard) {
+      if (navigator.clipboard?.writeText) {
         await navigator.clipboard.writeText(text);
-        setCopied(true);
-        setTimeout(() => setCopied(false), 2500);
+        setCopied('copied');
+        setTimeout(() => setCopied('idle'), 2500);
+        return;
       }
+      // Fallback for non-secure contexts
+      const textarea = document.createElement('textarea');
+      textarea.value = text;
+      textarea.setAttribute('readonly', '');
+      textarea.style.position = 'fixed';
+      textarea.style.opacity = '0';
+      document.body.appendChild(textarea);
+      textarea.select();
+      const ok = document.execCommand('copy');
+      document.body.removeChild(textarea);
+      setCopied(ok ? 'copied' : 'failed');
+      setTimeout(() => setCopied('idle'), 2500);
     } catch (e) {
       console.error('Failed to copy', e);
+      setCopied('failed');
+      setTimeout(() => setCopied('idle'), 2500);
     }
   };
 
@@ -81,7 +109,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
         <div className="border-2 border-black dark:border-zinc-400 bg-[#f4f3ee] dark:bg-zinc-950 p-3.5 sm:p-4 flex flex-col gap-2 sharp-box">
           <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-black/20 dark:border-zinc-800 pb-1.5">
             <span>{isWon ? 'AUTHENTICATED SHARED BORDER' : 'TARGET BORDER WAS'}</span>
-            <span>{border.lengthKm.toFixed(1)} KM</span>
+            <span>{Math.round(border.lengthKm).toLocaleString()} KM</span>
           </div>
 
           <div className="flex items-center gap-2 text-lg sm:text-2xl font-black uppercase text-black dark:text-white flex-wrap font-sans py-0.5">
@@ -95,9 +123,9 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
           </div>
 
           <div className="text-xs text-zinc-600 dark:text-zinc-400 font-bold uppercase flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 border-t border-black/20 dark:border-zinc-800 text-[11px]">
-            <span>REGION: <strong className="text-black dark:text-zinc-200">{border.countryA.region || border.countryA.continent}</strong></span>
+            <span>REGION: <strong className="text-black dark:text-zinc-200">{regionDisplay}</strong></span>
             <span>•</span>
-            <span>CONTINENT: <strong className="text-black dark:text-zinc-200">{border.countryA.continent}</strong></span>
+            <span>CONTINENT: <strong className="text-black dark:text-zinc-200">{continentDisplay}</strong></span>
           </div>
         </div>
 
@@ -146,7 +174,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
       <div className="border-2 border-black dark:border-zinc-400 bg-[#f4f3ee] dark:bg-zinc-950 p-3.5 sm:p-4 flex flex-col gap-2.5 sharp-box">
         <div className="flex items-center justify-between text-[10px] font-bold text-zinc-500 uppercase tracking-widest border-b border-black/20 dark:border-zinc-800 pb-1.5">
           <span>AUTHENTICATED SHARED BORDER</span>
-          <span>{border.lengthKm.toFixed(1)} KM</span>
+          <span>{Math.round(border.lengthKm).toLocaleString()} KM</span>
         </div>
 
         <div className="flex items-center gap-2 text-lg sm:text-2xl font-black uppercase text-black dark:text-white flex-wrap font-sans py-1">
@@ -160,9 +188,9 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
         </div>
 
         <div className="text-xs text-zinc-600 dark:text-zinc-400 font-bold uppercase flex flex-wrap items-center gap-x-3 gap-y-1 pt-1 border-t border-black/20 dark:border-zinc-800 text-[11px]">
-          <span>REGION: <strong className="text-black dark:text-zinc-200">{border.countryA.region || border.countryA.continent}</strong></span>
+          <span>REGION: <strong className="text-black dark:text-zinc-200">{regionDisplay}</strong></span>
           <span>•</span>
-          <span>CONTINENT: <strong className="text-black dark:text-zinc-200">{border.countryA.continent}</strong></span>
+          <span>CONTINENT: <strong className="text-black dark:text-zinc-200">{continentDisplay}</strong></span>
         </div>
       </div>
 
@@ -197,10 +225,15 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
           onClick={handleShare}
           className="flex-1 py-3 px-4 border-2 border-black dark:border-white bg-[#d92626] hover:bg-red-700 text-white font-mono font-bold text-xs uppercase tracking-widest flex items-center justify-center gap-2 cursor-pointer sharp-box transition-colors"
         >
-          {copied ? (
+          {copied === 'copied' ? (
             <>
               <Check className="w-4 h-4 stroke-[3]" />
               <span>COPIED TO CLIPBOARD!</span>
+            </>
+          ) : copied === 'failed' ? (
+            <>
+              <Share2 className="w-4 h-4" />
+              <span>COPY UNAVAILABLE</span>
             </>
           ) : (
             <>
@@ -223,7 +256,7 @@ export const ResultsPanel: React.FC<ResultsPanelProps> = ({
       <div className="text-center text-[11px] text-zinc-600 dark:text-zinc-400 border-t-2 border-black dark:border-zinc-700 pt-2.5 flex items-center justify-center gap-1.5 uppercase font-bold">
         <Clock className="w-3.5 h-3.5" />
         <span>
-          Next Daily Exhibition in:{' '}
+          Next Daily Exhibition (ET) in:{' '}
           <strong className="text-black dark:text-white font-bold">
             {String(countdown.hours).padStart(2, '0')}:
             {String(countdown.minutes).padStart(2, '0')}:

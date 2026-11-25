@@ -359,21 +359,38 @@ def main():
                             if len(context_stubs) >= 4:
                                 break
             else:
-                # Coastal stub: walk along country polygon boundary away from shared border
+                # Coastal stub: walk along the nearest polygon boundary ring away from shared border
                 for poly in [poly1, poly2]:
-                    bound = poly.boundary
+                    bound_geom = poly.boundary
+                    rings = flatten_lines(bound_geom)
+                    if not rings:
+                        continue
+                    bound = min(rings, key=lambda r: r.distance(ep_pt))
+                    ring_len = bound.length
+                    if ring_len <= 0:
+                        continue
                     proj_dist = bound.project(ep_pt)
+                    step_deg = 30.0 / 111.0
+                    half_step_deg = 15.0 / 111.0
                     # sample 30km outward in both directions to see which stays away from the border
                     for direction in [1, -1]:
-                        test_pt = bound.interpolate(proj_dist + direction * (30.0 / 111.0))
-                        # check that test_pt is not closer to the other border points
+                        d_mid_step = (proj_dist + direction * half_step_deg) % ring_len
+                        d_end_step = (proj_dist + direction * step_deg) % ring_len
+                        mid_pt = bound.interpolate(d_mid_step)
+                        test_pt = bound.interpolate(d_end_step)
+                        # Ensure smooth step along the coast without jumping across gaps
+                        if (
+                            haversine_km(ep_pt.x, ep_pt.y, mid_pt.x, mid_pt.y) > 100
+                            or haversine_km(mid_pt.x, mid_pt.y, test_pt.x, test_pt.y) > 100
+                        ):
+                            continue
+                        # check that test_pt is not closer to the border midpoint
                         d_to_mid = haversine_km(test_pt.x, test_pt.y, mx, my)
                         d_ep_mid = haversine_km(ep_pt.x, ep_pt.y, mx, my)
                         if d_to_mid >= d_ep_mid * 0.9:
                             stub_pts = [
                                 [round(ep_pt.x, 4), round(ep_pt.y, 4)],
-                                [round(bound.interpolate(proj_dist + direction * (15.0 / 111.0)).x, 4),
-                                 round(bound.interpolate(proj_dist + direction * (15.0 / 111.0)).y, 4)],
+                                [round(mid_pt.x, 4), round(mid_pt.y, 4)],
                                 [round(test_pt.x, 4), round(test_pt.y, 4)]
                             ]
                             context_stubs.append(stub_pts)
@@ -420,15 +437,11 @@ def main():
         json.dump(borders_list, f, separators=(',', ':'))
     print(f"Saved {OUT_BORDERS_FILE} ({os.path.getsize(OUT_BORDERS_FILE) / 1024:.1f} KB)")
 
-    # Build world reveal GeoJSON
+    # Build world reveal GeoJSON (using merged country_features so Somalia includes Somaliland)
     print("Building lightweight world reveal GeoJSON...")
     world_features = []
-    for c in countries_data['features']:
-        p = c['properties']
-        name = p.get('NAME')
-        if not name or name in EXCLUDED_ENTITIES or p.get('TYPE') == 'Dependency':
-            continue
-        c_geom = shape(c['geometry'])
+    for name, c_info in country_features.items():
+        c_geom = c_info['geom']
         simplified_world = c_geom.simplify(0.04, preserve_topology=True)
         if simplified_world.is_empty:
             simplified_world = c_geom
@@ -437,10 +450,10 @@ def main():
             "type": "Feature",
             "properties": {
                 "name": name,
-                "isoA2": p.get('ISO_A2') if p.get('ISO_A2') != '-99' else p.get('ISO_A2_EH', ''),
-                "isoA3": p.get('ISO_A3') if p.get('ISO_A3') != '-99' else p.get('ADM0_A3', ''),
-                "continent": p.get('CONTINENT', ''),
-                "region": p.get('SUBREGION') or p.get('REGION_UN', '')
+                "isoA2": c_info['isoA2'],
+                "isoA3": c_info['isoA3'],
+                "continent": c_info['continent'],
+                "region": c_info['region']
             },
             "geometry": clean_geojson_geometry(mapping(simplified_world), precision=3)
         })

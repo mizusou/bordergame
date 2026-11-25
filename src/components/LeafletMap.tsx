@@ -4,8 +4,43 @@ import 'leaflet/dist/leaflet.css';
 import { BorderItem } from '../types/game.ts';
 import { ZoomIn, ZoomOut, RotateCcw } from 'lucide-react';
 import { getClosestPointOnGeometry } from '../utils/geo.ts';
-import worldRevealData from '../data/world_reveal.json';
 import { getLandNeighbors } from '../utils/neighbors.ts';
+
+let cachedWorldReveal: GeoJSON.FeatureCollection | null = null;
+
+function computeRingSignedAreaAndCentroid(
+  ring: Array<[number, number]>
+): { absArea: number; centroid: [number, number] } {
+  let signedArea = 0;
+  let cx = 0;
+  let cy = 0;
+  const n = ring.length;
+  for (let i = 0; i < n; i++) {
+    const [x0, y0] = ring[i];
+    const [x1, y1] = ring[(i + 1) % n];
+    const cross = x0 * y1 - x1 * y0;
+    signedArea += cross;
+    cx += (x0 + x1) * cross;
+    cy += (y0 + y1) * cross;
+  }
+  const area = signedArea * 0.5;
+  if (Math.abs(area) < 1e-9 || n === 0) {
+    let sx = 0;
+    let sy = 0;
+    for (const [x, y] of ring) {
+      sx += x;
+      sy += y;
+    }
+    return {
+      absArea: 0,
+      centroid: n > 0 ? [sx / n, sy / n] : [0, 0],
+    };
+  }
+  return {
+    absArea: Math.abs(area),
+    centroid: [cx / (6 * area), cy / (6 * area)],
+  };
+}
 
 interface LeafletMapProps {
   theme: 'light' | 'dark';
@@ -28,16 +63,40 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const mapRef = useRef<L.Map | null>(null);
+  const themeRef = useRef<'light' | 'dark'>(theme);
+  themeRef.current = theme;
+
+  const fittedBorderIdRef = useRef<string | null>(null);
+  const fittedRevealBorderIdRef = useRef<string | null>(null);
 
   // Layers
-  const tileLayerRef = useRef<L.TileLayer | null>(null);
+  const tileLayerRef = useRef<L.Layer | null>(null);
   const gridLayerRef = useRef<L.GridLayer | null>(null);
   const vectorLayerGroupRef = useRef<L.LayerGroup | null>(null);
 
   // Style switcher for reveal mode: 'canvas' | 'satellite'
   const [mapStyle, setMapStyle] = useState<'canvas' | 'satellite'>('canvas');
+  const [worldRevealData, setWorldRevealData] = useState<GeoJSON.FeatureCollection | null>(
+    () => cachedWorldReveal
+  );
 
-  // Initialize Map
+  // Lazy-load world reveal polygons only when game ends
+  useEffect(() => {
+    if (!isGameOver || cachedWorldReveal) return;
+    let cancelled = false;
+    import('../data/world_reveal.json').then((mod) => {
+      const data = (mod.default || mod) as GeoJSON.FeatureCollection;
+      cachedWorldReveal = data;
+      if (!cancelled) {
+        setWorldRevealData(data);
+      }
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [isGameOver]);
+
+  // Initialize Map (runs once per mounted LeafletMap; border.id is keyed by MapCanvas)
   useEffect(() => {
     if (!containerRef.current || mapRef.current) return;
 
@@ -56,26 +115,30 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       maxZoom: 18,
     });
 
-    if (initialBounds.isValid()) {
-      map.fitBounds(initialBounds, { padding: [35, 35], animate: false });
+    if (initialBounds.isValid() && map.getSize().x > 20) {
+      map.fitBounds(initialBounds, { padding: [50, 50], animate: false });
+      fittedBorderIdRef.current = border.id;
     }
 
-    // Staggered size invalidation and fitBounds to prevent mobile/hidden 0-size initialization bug
-    const invalidateAndFit = () => {
+    // Invalidate size on container resize; only fit bounds if initial fit hasn't succeeded yet
+    const handleResizeOrInit = () => {
       if (!map) return;
       map.invalidateSize();
-      const bounds = L.geoJSON(border.geometry as any).getBounds();
-      if (bounds.isValid() && map.getSize().x > 20) {
-        map.fitBounds(bounds, { padding: [35, 35], animate: false });
+      if (fittedBorderIdRef.current !== border.id && map.getSize().x > 20) {
+        const bounds = L.geoJSON(border.geometry as any).getBounds();
+        if (bounds.isValid()) {
+          map.fitBounds(bounds, { padding: [50, 50], animate: false });
+          fittedBorderIdRef.current = border.id;
+        }
       }
     };
 
-    const t1 = setTimeout(invalidateAndFit, 60);
-    const t2 = setTimeout(invalidateAndFit, 250);
-    const t3 = setTimeout(invalidateAndFit, 600);
+    const t1 = setTimeout(handleResizeOrInit, 60);
+    const t2 = setTimeout(handleResizeOrInit, 250);
+    const t3 = setTimeout(handleResizeOrInit, 600);
 
     const resizeObserver = new ResizeObserver(() => {
-      invalidateAndFit();
+      handleResizeOrInit();
     });
     if (containerRef.current) {
       resizeObserver.observe(containerRef.current);
@@ -84,12 +147,16 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     // Technical grid canvas layer matching Swiss Neue Typographie aesthetic
     const TechnicalGridLayer = L.GridLayer.extend({
       createTile: function () {
+        const dpr = Math.min(window.devicePixelRatio || 1, 2);
         const tile = document.createElement('canvas');
-        tile.width = 256;
-        tile.height = 256;
+        tile.width = 256 * dpr;
+        tile.height = 256 * dpr;
+        tile.style.width = '256px';
+        tile.style.height = '256px';
         const ctx = tile.getContext('2d');
         if (ctx) {
-          const isLight = theme === 'light';
+          ctx.scale(dpr, dpr);
+          const isLight = themeRef.current === 'light';
           ctx.fillStyle = isLight ? '#fcfbf7' : '#0c0d12';
           ctx.fillRect(0, 0, 256, 256);
 
@@ -128,7 +195,16 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       resizeObserver.disconnect();
       map.remove();
       mapRef.current = null;
+      fittedBorderIdRef.current = null;
+      fittedRevealBorderIdRef.current = null;
     };
+  }, []);
+
+  // Redraw grid tiles in-place when theme changes (preserving zoom/pan)
+  useEffect(() => {
+    if (gridLayerRef.current && mapRef.current?.hasLayer(gridLayerRef.current)) {
+      gridLayerRef.current.redraw();
+    }
   }, [theme]);
 
   // Update Basemap Tiles based on Game Over, theme, & mapStyle
@@ -165,7 +241,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         );
         const group = L.layerGroup([lightBase, lightLabels]);
         group.addTo(map);
-        tileLayerRef.current = group as any;
+        tileLayerRef.current = group;
       } else {
         const darkBase = L.tileLayer(
           'https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}',
@@ -178,7 +254,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         );
         const group = L.layerGroup([darkBase, darkLabels]);
         group.addTo(map);
-        tileLayerRef.current = group as any;
+        tileLayerRef.current = group;
       }
     } else {
       // In active guessing mode: PURGE any real map tiles immediately
@@ -226,7 +302,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       : '#ffffff';
 
     // 0. On Game Over: Draw Bright Sovereign Country Borders & Neighbor Context
-    if (isGameOver) {
+    if (isGameOver && worldRevealData) {
       const countriesLayer = L.geoJSON(worldRevealData as any, {
         style: (feature) => {
           const name = feature?.properties?.name;
@@ -256,31 +332,31 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       surroundingSet.delete(border.countryA.name);
       surroundingSet.delete(border.countryB.name);
 
-      const features = (worldRevealData as any).features || [];
+      const features = worldRevealData.features || [];
       for (const neighborName of surroundingSet) {
         const feat = features.find((f: any) => f.properties?.name === neighborName);
-        if (feat) {
-          let ring: Array<[number, number]> | null = null;
+        if (feat && feat.geometry) {
+          let bestCentroid: [number, number] | null = null;
           if (feat.geometry.type === 'Polygon') {
-            ring = feat.geometry.coordinates[0];
+            const outerRing = feat.geometry.coordinates[0] as Array<[number, number]>;
+            if (outerRing?.length > 0) {
+              bestCentroid = computeRingSignedAreaAndCentroid(outerRing).centroid;
+            }
           } else if (feat.geometry.type === 'MultiPolygon') {
-            let maxCount = 0;
-            for (const poly of feat.geometry.coordinates) {
-              if (poly[0]?.length > maxCount) {
-                maxCount = poly[0].length;
-                ring = poly[0];
+            let maxArea = -1;
+            for (const poly of feat.geometry.coordinates as Array<Array<Array<[number, number]>>>) {
+              const outerRing = poly[0];
+              if (outerRing?.length > 0) {
+                const { absArea, centroid } = computeRingSignedAreaAndCentroid(outerRing);
+                if (absArea > maxArea) {
+                  maxArea = absArea;
+                  bestCentroid = centroid;
+                }
               }
             }
           }
-          if (ring && ring.length > 0) {
-            let sx = 0, sy = 0;
-            for (const pt of ring) {
-              sx += pt[0];
-              sy += pt[1];
-            }
-            const centerLon = sx / ring.length;
-            const centerLat = sy / ring.length;
-
+          if (bestCentroid) {
+            const [centerLon, centerLat] = bestCentroid;
             const nIcon = L.divIcon({
               className: 'custom-neighbor-label',
               html: `<div class="px-2 py-0.5 bg-black/85 text-zinc-300 dark:bg-zinc-950/90 dark:text-zinc-200 font-mono font-bold text-[10px] uppercase border border-zinc-500/60 shadow-sm w-max transform -translate-x-1/2 -translate-y-1/2 pointer-events-none select-none">${neighborName}</div>`,
@@ -542,11 +618,16 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
       }
     }
 
-    // Fit view (animate smoothly ONLY on reveal, jump instantly without zooming in guessing mode)
-    if (bounds.isValid()) {
+    // Fit view only on initial border load or on first transition to Game Over reveal
+    if (bounds.isValid() && map.getSize().x > 20) {
       if (isGameOver) {
-        map.flyToBounds(bounds.pad(1.2), { duration: 1.4 });
-      } else {
+        if (fittedRevealBorderIdRef.current !== border.id) {
+          fittedRevealBorderIdRef.current = border.id;
+          fittedBorderIdRef.current = border.id;
+          map.flyToBounds(bounds.pad(1.2), { duration: 1.4 });
+        }
+      } else if (fittedBorderIdRef.current !== border.id) {
+        fittedBorderIdRef.current = border.id;
         map.fitBounds(bounds, { padding: [50, 50], animate: false });
       }
     }
@@ -556,7 +637,7 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
         map.off('move zoom viewreset resize', updateLabels);
       }
     };
-  }, [border, unlockedHints, lockedCountry, guessedCountries, isGameOver, isWon]);
+  }, [border, unlockedHints, lockedCountry, guessedCountries, isGameOver, isWon, theme, worldRevealData]);
 
   // Controls
   const handleZoomIn = () => mapRef.current?.zoomIn();
@@ -567,7 +648,11 @@ export const LeafletMap: React.FC<LeafletMapProps> = ({
     const tempLayer = L.geoJSON(border.geometry as any);
     const bounds = tempLayer.getBounds();
     if (bounds.isValid()) {
-      map.fitBounds(bounds, { padding: [50, 50], animate: true });
+      if (isGameOver) {
+        map.flyToBounds(bounds.pad(1.2), { duration: 0.6 });
+      } else {
+        map.fitBounds(bounds, { padding: [50, 50], animate: true });
+      }
     }
   };
 

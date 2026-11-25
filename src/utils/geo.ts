@@ -31,7 +31,8 @@ export function calculateDistanceKm(
     Math.sin(deltaPhi / 2) ** 2 +
     Math.cos(phi1) * Math.cos(phi2) * Math.sin(deltaLambda / 2) ** 2;
 
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  const clampedA = Math.max(0, Math.min(1, a));
+  const c = 2 * Math.atan2(Math.sqrt(clampedA), Math.sqrt(1 - clampedA));
   return Math.round(R_EARTH_KM * c);
 }
 
@@ -117,42 +118,6 @@ export function formatLatBand(lat: number): string {
 }
 
 /**
- * Scale bar calculation: returns pixel width for a round km distance (e.g. 100km, 250km, 500km)
- */
-export function calculateScaleBar(
-  midpoint: [number, number],
-  projection: (coord: [number, number]) => [number, number] | null
-): { km: number; pixelWidth: number } {
-  const centerPx = projection(midpoint);
-  if (!centerPx) return { km: 100, pixelWidth: 60 };
-
-  // Calculate 100km offset east
-  const deltaLon = 100 / (111.32 * Math.cos(toRadians(midpoint[1])));
-  const offsetEast: [number, number] = [midpoint[0] + deltaLon, midpoint[1]];
-  const offsetPx = projection(offsetEast);
-
-  if (!offsetPx) return { km: 100, pixelWidth: 60 };
-
-  const pxFor100Km = Math.hypot(offsetPx[0] - centerPx[0], offsetPx[1] - centerPx[1]);
-
-  // Choose a clean display distance (25, 50, 100, 200, 500, 1000)
-  const candidateKm = [25, 50, 100, 200, 500, 1000];
-  let bestKm = 100;
-  let bestWidth = pxFor100Km;
-
-  for (const km of candidateKm) {
-    const width = (km / 100) * pxFor100Km;
-    if (width >= 60 && width <= 180) {
-      bestKm = km;
-      bestWidth = width;
-      break;
-    }
-  }
-
-  return { km: bestKm, pixelWidth: Math.round(bestWidth) };
-}
-
-/**
  * Finds the closest point [lon, lat] on a GeoJSON LineString or MultiLineString to a target [lon, lat]
  */
 export function getClosestPointOnGeometry(
@@ -160,17 +125,20 @@ export function getClosestPointOnGeometry(
   target: [number, number]
 ): [number, number] {
   const [targetLon, targetLat] = target;
+  const cosLat = Math.max(0.1, Math.cos(toRadians(targetLat)));
   let closest: [number, number] = target;
   let minDistance = Infinity;
 
   const checkSegment = (p1: [number, number], p2: [number, number]) => {
     const [x1, y1] = p1;
     const [x2, y2] = p2;
-    const dx = x2 - x1;
+    const dx = (x2 - x1) * cosLat;
     const dy = y2 - y1;
+    const tx = (targetLon - x1) * cosLat;
+    const ty = targetLat - y1;
     const lenSq = dx * dx + dy * dy;
     if (lenSq === 0) {
-      const d = (targetLon - x1) ** 2 + (targetLat - y1) ** 2;
+      const d = tx * tx + ty * ty;
       if (d < minDistance) {
         minDistance = d;
         closest = p1;
@@ -178,11 +146,13 @@ export function getClosestPointOnGeometry(
       return;
     }
 
-    let t = ((targetLon - x1) * dx + (targetLat - y1) * dy) / lenSq;
+    let t = (tx * dx + ty * dy) / lenSq;
     t = Math.max(0, Math.min(1, t));
-    const projLon = x1 + t * dx;
-    const projLat = y1 + t * dy;
-    const d = (targetLon - projLon) ** 2 + (targetLat - projLat) ** 2;
+    const projLon = x1 + t * (x2 - x1);
+    const projLat = y1 + t * (y2 - y1);
+    const dLon = (targetLon - projLon) * cosLat;
+    const dLat = targetLat - projLat;
+    const d = dLon * dLon + dLat * dLat;
     if (d < minDistance) {
       minDistance = d;
       closest = [projLon, projLat];

@@ -1,5 +1,10 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
-import { allCountries, getLandNeighbors, doShareLandBorder } from '../utils/neighbors.ts';
+import {
+  allCountries,
+  getLandNeighbors,
+  doShareLandBorder,
+  resolveCountryName,
+} from '../utils/neighbors.ts';
 import { AlertCircle } from 'lucide-react';
 
 interface GuessInputProps {
@@ -38,11 +43,22 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       setQuery2('');
       setActiveSlot(2);
       setDropdownOpen(false);
+      setValidationError(null);
       setTimeout(() => {
         input2Ref.current?.focus();
       }, 20);
+    } else {
+      setCountry1('');
+      setQuery1('');
+      setCountry2('');
+      setQuery2('');
+      setActiveSlot(null);
+      setDropdownOpen(false);
+      setValidationError(null);
     }
   }, [lockedCountry]);
+
+  const resolvedCountry1 = useMemo(() => resolveCountryName(country1), [country1]);
 
   // Suggestions Slot 1
   const suggestions1 = useMemo(() => {
@@ -56,7 +72,8 @@ export const GuessInput: React.FC<GuessInputProps> = ({
   // Suggestions Slot 2
   const suggestions2 = useMemo(() => {
     const q = query2.toLowerCase().trim();
-    const neighbors = country1 ? getLandNeighbors(country1) : [];
+    const canonical1 = resolvedCountry1;
+    const neighbors = canonical1 ? getLandNeighbors(canonical1) : [];
 
     let list = allCountries;
     if (q) {
@@ -65,7 +82,7 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       );
     }
 
-    if (country1) {
+    if (canonical1) {
       list = [...list].sort((a, b) => {
         const aIsNeighbor = neighbors.includes(a.name);
         const bIsNeighbor = neighbors.includes(b.name);
@@ -75,8 +92,12 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       });
     }
 
-    return list.filter((c) => c.name.toLowerCase() !== country1.toLowerCase()).slice(0, 12);
-  }, [query2, country1]);
+    const filtered = list.filter(
+      (c) => !canonical1 || c.name.toLowerCase() !== canonical1.toLowerCase()
+    );
+    const limit = canonical1 ? Math.max(12, neighbors.length) : 12;
+    return filtered.slice(0, limit);
+  }, [query2, resolvedCountry1]);
 
   const currentSuggestions = activeSlot === 1 ? suggestions1 : suggestions2;
 
@@ -145,6 +166,8 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       } else if (country1.trim() && country2.trim()) {
         e.preventDefault();
         handleSubmit();
+      } else {
+        e.preventDefault();
       }
     } else if (e.key === 'Escape') {
       setDropdownOpen(false);
@@ -160,11 +183,20 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     if (e) e.preventDefault();
     if (disabled) return;
 
-    const c1 = country1.trim();
-    const c2 = country2.trim();
+    const raw1 = country1.trim();
+    const raw2 = country2.trim();
+
+    if (!raw1 || !raw2) {
+      setValidationError('Select two neighboring countries.');
+      return;
+    }
+
+    const c1 = resolveCountryName(raw1);
+    const c2 = resolveCountryName(raw2);
 
     if (!c1 || !c2) {
-      setValidationError('Select two neighboring countries.');
+      const invalidLabel = !c1 && !c2 ? `"${raw1}" and "${raw2}"` : `"${!c1 ? raw1 : raw2}"`;
+      setValidationError(`Unknown country: ${invalidLabel}. Select a country from the list.`);
       return;
     }
 
@@ -185,14 +217,13 @@ export const GuessInput: React.FC<GuessInputProps> = ({
     }
 
     if (!doShareLandBorder(c1, c2)) {
-      setValidationError(`Note: ${c1} and ${c2} do not share a land border.`);
+      setValidationError(`${c1} and ${c2} do not share a land border.`);
+      return;
     }
 
-    onMakeGuess(c1, c2);
-
-    // Keep active input focused for immediate typing, but ensure dropdown is closed
     setDropdownOpen(false);
     setValidationError(null);
+    onMakeGuess(c1, c2);
 
     if (!lockedCountry) {
       setCountry1('');
@@ -200,9 +231,6 @@ export const GuessInput: React.FC<GuessInputProps> = ({
       setCountry2('');
       setQuery2('');
       setActiveSlot(1);
-      setTimeout(() => {
-        input1Ref.current?.focus();
-      }, 20);
     } else {
       setCountry2('');
       setQuery2('');
@@ -356,16 +384,16 @@ export const GuessInput: React.FC<GuessInputProps> = ({
           ref={dropdownRef}
           className="absolute z-40 top-full mt-1 w-full border-2 border-black dark:border-zinc-300 bg-white dark:bg-zinc-900 shadow-2xl max-h-60 overflow-y-auto text-xs p-1 font-mono sharp-box"
         >
-          {activeSlot === 2 && country1 && (
+          {activeSlot === 2 && resolvedCountry1 && (
             <div className="px-2.5 py-1 text-[10px] font-bold text-emerald-600 dark:text-emerald-400 border-b border-black dark:border-zinc-700 mb-1 flex items-center justify-between uppercase">
-              <span>Neighbors of {country1}</span>
+              <span>Neighbors of {resolvedCountry1}</span>
               <span className="text-zinc-400 dark:text-zinc-500">[ RECOMMENDED ]</span>
             </div>
           )}
 
           {currentSuggestions.map((item, idx) => {
             const isNeighbor =
-              activeSlot === 2 && country1 && getLandNeighbors(country1).includes(item.name);
+              activeSlot === 2 && resolvedCountry1 && getLandNeighbors(resolvedCountry1).includes(item.name);
             const isHighlighted = idx === highlightedIndex;
 
             return (
@@ -375,7 +403,6 @@ export const GuessInput: React.FC<GuessInputProps> = ({
                 onMouseEnter={() => setHighlightedIndex(idx)}
                 onMouseDown={(e) => {
                   e.preventDefault();
-                  selectCountry(item.name, activeSlot);
                 }}
                 onClick={() => selectCountry(item.name, activeSlot)}
                 className={`w-full text-left px-3 py-2 flex items-center justify-between transition-colors cursor-pointer uppercase font-bold text-xs ${

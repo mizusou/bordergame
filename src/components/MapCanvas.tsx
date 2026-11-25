@@ -38,7 +38,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
       <div className="relative isolate w-full h-[260px] sm:h-[360px] lg:h-auto lg:flex-1 min-h-[260px] sm:min-h-[360px] lg:min-h-[480px] border-2 border-black dark:border-zinc-400 bg-white dark:bg-[#0c0d12] overflow-hidden shadow-none">
         {/* Real Map (Leaflet) */}
         <LeafletMap
-          key={`${mode}-${border.id}-${theme}`}
+          key={`${mode}-${border.id}`}
           theme={theme}
           border={border}
           unlockedHints={unlockedHints}
@@ -73,7 +73,7 @@ export const MapCanvas: React.FC<MapCanvasProps> = ({
         {/* Total Length */}
         {(unlockedHints >= 1 || isGameOver) && (
           <div className="font-bold text-[#d92626] dark:text-[#f87171] text-[10px] sm:text-xs">
-            {border.lengthKm.toFixed(1)} KM TOTAL
+            {Math.round(border.lengthKm).toLocaleString()} KM TOTAL
           </div>
         )}
       </div>

@@ -1,28 +1,53 @@
 import { BorderItem } from '../types/game.ts';
 import { allBorders } from './neighbors.ts';
 
-// Anchor date for Day #1 (Nov 11, 2026 -> Nov 20, 2026 is Exhibition #9)
-const EPOCH_DATE = new Date(2026, 10, 11, 12, 0, 0);
+const EASTERN_TIMEZONE = 'America/New_York';
 
-export function getTodayDateString(): string {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, '0');
-  const day = String(now.getDate()).padStart(2, '0');
-  return `${year}-${month}-${day}`;
+// Nov 11, 2026 is Day 0 (Nov 12, 2026 = Day #1, Nov 20, 2026 = Day #9)
+const EPOCH_UTC_MS = Date.UTC(2026, 10, 11);
+const MS_PER_DAY = 1000 * 60 * 60 * 24;
+
+const easternFormatter = new Intl.DateTimeFormat('en-US', {
+  timeZone: EASTERN_TIMEZONE,
+  year: 'numeric',
+  month: '2-digit',
+  day: '2-digit',
+  hour: '2-digit',
+  minute: '2-digit',
+  second: '2-digit',
+  hourCycle: 'h23',
+});
+
+function getEasternParts(date: Date = new Date()): {
+  year: number;
+  month: number;
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+} {
+  const parts = easternFormatter.formatToParts(date);
+  const get = (type: Intl.DateTimeFormatPartTypes) =>
+    Number(parts.find((p) => p.type === type)?.value ?? 0);
+  return {
+    year: get('year'),
+    month: get('month'),
+    day: get('day'),
+    hour: get('hour') % 24,
+    minute: get('minute'),
+    second: get('second'),
+  };
 }
 
-export function getDayNumber(dateStr?: string): number {
-  let d: Date;
-  if (dateStr) {
-    const [y, m, day] = dateStr.split('-').map(Number);
-    d = new Date(y, m - 1, day, 12, 0, 0);
-  } else {
-    const now = new Date();
-    d = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 12, 0, 0);
-  }
-  const diffTime = d.getTime() - EPOCH_DATE.getTime();
-  const diffDays = Math.round(diffTime / (1000 * 60 * 60 * 24));
+export function getTodayDateString(date: Date = new Date()): string {
+  const { year, month, day } = getEasternParts(date);
+  return `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+}
+
+export function getDayNumber(dateStr: string = getTodayDateString()): number {
+  const [y, m, day] = dateStr.split('-').map(Number);
+  const targetUtcMs = Date.UTC(y, m - 1, day);
+  const diffDays = Math.round((targetUtcMs - EPOCH_UTC_MS) / MS_PER_DAY);
   return Math.max(1, diffDays);
 }
 
@@ -48,7 +73,7 @@ export function getDailyBorder(dateStr: string = getTodayDateString()): {
   dayNumber: number;
 } {
   const dayNum = getDayNumber(dateStr);
-  const shuffledIndex = SHUFFLED_INDICES[dayNum % SHUFFLED_INDICES.length];
+  const shuffledIndex = SHUFFLED_INDICES[(dayNum - 1) % SHUFFLED_INDICES.length];
   return {
     border: allBorders[shuffledIndex],
     dayNumber: dayNum,
@@ -59,23 +84,40 @@ export function getRandomPracticeBorder(excludeId?: string): BorderItem {
   const available = excludeId
     ? allBorders.filter((b) => b.id !== excludeId)
     : allBorders;
-  const randomIndex = Math.floor(Math.random() * available.length);
-  return available[randomIndex];
+  const pool = available.length > 0 ? available : allBorders;
+  const randomIndex = Math.floor(Math.random() * pool.length);
+  return pool[randomIndex];
 }
 
-export function getTimeUntilMidnight(): {
+export function getTimeUntilMidnight(now: Date = new Date()): {
   hours: number;
   minutes: number;
   seconds: number;
 } {
-  const now = new Date();
-  const midnight = new Date(now);
-  midnight.setHours(24, 0, 0, 0);
+  const { year, month, day, hour, minute, second } = getEasternParts(now);
+  const nyNowAsUtc = Date.UTC(year, month - 1, day, hour, minute, second);
+  const offsetNowMs = nyNowAsUtc - now.getTime();
+  const tomorrowMidnightAsUtc = Date.UTC(year, month - 1, day + 1, 0, 0, 0);
 
-  const diffMs = Math.max(0, midnight.getTime() - now.getTime());
-  const hours = Math.floor(diffMs / (1000 * 60 * 60));
-  const minutes = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-  const seconds = Math.floor((diffMs % (1000 * 60)) / 1000);
+  let targetUtcMs = tomorrowMidnightAsUtc - offsetNowMs;
+  // Refine once in case a DST transition occurs between now and Eastern midnight
+  const pTarget = getEasternParts(new Date(targetUtcMs));
+  const targetAsUtc = Date.UTC(
+    pTarget.year,
+    pTarget.month - 1,
+    pTarget.day,
+    pTarget.hour,
+    pTarget.minute,
+    pTarget.second
+  );
+  const offsetAtTargetMs = targetAsUtc - targetUtcMs;
+  targetUtcMs = tomorrowMidnightAsUtc - offsetAtTargetMs;
+
+  const diffMs = Math.max(0, targetUtcMs - now.getTime());
+  const totalSeconds = Math.ceil(diffMs / 1000);
+  const hours = Math.floor(totalSeconds / 3600);
+  const minutes = Math.floor((totalSeconds % 3600) / 60);
+  const seconds = totalSeconds % 60;
 
   return { hours, minutes, seconds };
 }
